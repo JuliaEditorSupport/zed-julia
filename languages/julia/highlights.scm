@@ -41,11 +41,44 @@
 (macro_identifier
   (identifier) @function.macro) ; for any one using the variable highlight
 
+; Macro definitions
 (macro_definition
   (signature
     (call_expression
       .
-      (identifier) @function.macro)))
+      (identifier) @function.definition)))
+
+(macro_definition
+  (signature
+    (call_expression
+      (field_expression
+        (identifier) @function.definition .))))
+
+; Function definitions
+(function_definition
+  (signature
+    (call_expression
+      .
+      (identifier) @function.definition)))
+
+(function_definition
+  (signature
+    (call_expression
+      (field_expression
+        (identifier) @function.definition .))))
+
+; Short function definitions like foo(x) = 2x
+(assignment
+  .
+  (call_expression
+    .
+    (identifier) @function.definition))
+
+(assignment
+  .
+  (call_expression
+    (field_expression
+      (identifier) @function.definition .)))
 
 ; Builtins
 ((identifier) @function.builtin
@@ -329,6 +362,7 @@
 
 ; Keywords
 [
+  "const"
   "global"
   "local"
 ] @keyword
@@ -399,6 +433,9 @@
 (for_clause
   "for" @keyword.repeat)
 
+(for_binding
+  "outer" @keyword.repeat)
+
 [
   (break_statement)
   (continue_statement)
@@ -428,6 +465,7 @@
 
 (struct_definition
   [
+    "mutable"
     "struct"
     "end"
   ] @keyword)
@@ -452,11 +490,6 @@
 
 (return_statement
   "return" @keyword.return)
-
-[
-  "const"
-  "mutable"
-] @type.qualifier
 
 ; Operators & Punctuation
 [
@@ -502,6 +535,16 @@
   "}"
 ] @punctuation.bracket
 
+(string_interpolation
+  [
+    "$"
+    "("
+    ")"
+  ] @punctuation.special)
+
+(macro_identifier
+  (operator) @function.macro (#eq? @function.macro ".")) ; match the dot in the @. macro
+
 ; Literals
 (boolean_literal) @boolean
 
@@ -515,9 +558,9 @@
 ((identifier) @constant.builtin
   (#any-of? @constant.builtin "nothing" "missing"))
 
-(character_literal) @character
+(character_literal) @string
 
-(escape_sequence) @escape
+(escape_sequence) @string.escape
 
 (string_literal) @string
 
@@ -538,6 +581,8 @@
     (function_definition)
     (assignment)
     (const_statement)
+    (open_tuple
+      (identifier))
   ])
 
 [
