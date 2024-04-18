@@ -68,17 +68,19 @@
         (identifier) @function.definition .))))
 
 ; Short function definitions like foo(x) = 2x
+; See also the comment in outline.scm.
 (assignment
   .
-  (call_expression
-    .
-    (identifier) @function.definition))
-
-(assignment
-  .
-  (call_expression
-    (field_expression
-      (identifier) @function.definition .)))
+  [
+    (call_expression . (identifier) @function.definition)
+    (typed_expression . (call_expression . (identifier) @function.definition))
+    (where_expression . (call_expression . (identifier) @function.definition))
+    (where_expression . (typed_expression . (call_expression . (identifier) @function.definition)))
+    (call_expression . (field_expression (identifier) @function.definition .))
+    (typed_expression . (call_expression . (field_expression (identifier) @function.definition .)))
+    (where_expression . (call_expression . (field_expression (identifier) @function.definition .)))
+    (where_expression . (typed_expression . (call_expression . (field_expression (identifier) @function.definition .))))
+  ])
 
 ; Builtins
 ((identifier) @function.builtin
