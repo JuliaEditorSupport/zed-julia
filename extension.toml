@@ -4,7 +4,7 @@ description = "Julia support."
 version = "0.1.0"
 schema_version = 1
 authors = ["Paul Berg <paul@plutojl.org>"]
-repository = "https://github.com/Pangoraw/zed-julia"
+repository = "https://github.com/JuliaEditorSupport/zed-julia"
 
 [grammars.julia]
 repository = "https://github.com/tree-sitter/tree-sitter-julia"
