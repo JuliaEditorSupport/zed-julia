@@ -8,7 +8,7 @@ repository = "https://github.com/Pangoraw/zed-julia"
 
 [grammars.julia]
 repository = "https://github.com/tree-sitter/tree-sitter-julia"
-commit = "0a80d33aca49dd257625ab25ef3a506e2b99a554"
+commit = "acd5ca12cc278df7960629c2429a096c7ac4bbea"
 
 [language_servers.julia]
 languages = ["Julia"]
