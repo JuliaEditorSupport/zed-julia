@@ -574,7 +574,7 @@
 (prefixed_command_literal
   prefix: (identifier) @function.macro) @string.special
 
-((string_literal) @string.doc
+((string_literal) @comment.doc
   .
   [
     (module_definition)
