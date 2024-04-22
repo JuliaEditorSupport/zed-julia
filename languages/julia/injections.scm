@@ -13,8 +13,7 @@
       (identifier))
   ]
   (#match? @content "^\"\"\"")
-  (#set! "language" "markdown")
-  (#offset! @content 0 3 0 -3))
+  (#set! "language" "markdown"))
 
 ([
   (line_comment)
@@ -25,5 +24,4 @@
 ((prefixed_string_literal
   prefix: (identifier) @_prefix) @content
   (#eq? @_prefix "r")
-  (#set! "language" "regex")
-  (#offset! @content 0 2 0 -1))
+  (#set! "language" "regex"))
