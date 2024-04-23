@@ -1,7 +1,7 @@
 id = "julia"
 name = "Julia"
 description = "Julia support."
-version = "0.1.0"
+version = "0.1.1"
 schema_version = 1
 authors = ["Paul Berg <paul@plutojl.org>"]
 repository = "https://github.com/JuliaEditorSupport/zed-julia"
