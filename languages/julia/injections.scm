@@ -1,4 +1,5 @@
 ; Inject markdown in docstrings
+; Be aware that this will clutter the outline view with markdown headers.
 ((string_literal) @content
   .
   [
@@ -8,10 +9,11 @@
     (function_definition)
     (assignment)
     (const_statement)
+    (open_tuple
+      (identifier))
   ]
-  (#lua-match? @content "^\"\"\"")
-  (#set! "language" "markdown")
-  (#offset! @content 0 3 0 -3))
+  (#match? @content "^\"\"\"")
+  (#set! "language" "markdown"))
 
 ([
   (line_comment)
@@ -22,5 +24,4 @@
 ((prefixed_string_literal
   prefix: (identifier) @_prefix) @content
   (#eq? @_prefix "r")
-  (#set! "language" "regex")
-  (#offset! @content 0 2 0 -1))
+  (#set! "language" "regex"))

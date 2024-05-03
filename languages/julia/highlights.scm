@@ -41,12 +41,6 @@
 (macro_identifier
   (identifier) @function.macro) ; for any one using the variable highlight
 
-(macro_definition
-  (signature
-    (call_expression
-      .
-      (identifier) @function.macro)))
-
 ; Builtins
 ((identifier) @function.builtin
   (#any-of? @function.builtin "_abstracttype" "_apply_iterate" "_apply_pure" "_call_in_world" "_call_in_world_total" "_call_latest" "_equiv_typedef" "_expr" "_primitivetype" "_setsuper!" "_structtype" "_typebody!" "_typevar" "applicable" "apply_type" "arrayref" "arrayset" "arraysize" "const_arrayref" "donotdelete" "fieldtype" "get_binding_type" "getfield" "ifelse" "invoke" "isa" "isdefined" "modifyfield!" "nfields" "replacefield!" "set_binding_type!" "setfield!" "sizeof" "svec" "swapfield!" "throw" "tuple" "typeassert" "typeof"))
@@ -329,6 +323,7 @@
 
 ; Keywords
 [
+  "const"
   "global"
   "local"
 ] @keyword
@@ -399,6 +394,9 @@
 (for_clause
   "for" @keyword.repeat)
 
+(for_binding
+  "outer" @keyword.repeat)
+
 [
   (break_statement)
   (continue_statement)
@@ -428,6 +426,7 @@
 
 (struct_definition
   [
+    "mutable"
     "struct"
     "end"
   ] @keyword)
@@ -452,11 +451,6 @@
 
 (return_statement
   "return" @keyword.return)
-
-[
-  "const"
-  "mutable"
-] @type.qualifier
 
 ; Operators & Punctuation
 [
@@ -502,6 +496,40 @@
   "}"
 ] @punctuation.bracket
 
+(string_interpolation
+  [
+    "$"
+    "("
+    ")"
+  ] @punctuation.special)
+
+; Match the dot in the @. macro
+(macro_identifier
+  (operator) @function.macro (#eq? @function.macro "."))
+
+; Macro and function definitions
+(signature
+  (call_expression
+    [
+      (identifier) @function.definition
+      (field_expression (identifier) @function.definition .)
+    ]))
+
+; Short function definitions like foo(x) = 2x
+(assignment
+  .
+  [
+    (call_expression (identifier) @function.definition)
+    (typed_expression . (call_expression (identifier) @function.definition))
+    (where_expression . (call_expression (identifier) @function.definition))
+    (where_expression . (typed_expression . (call_expression (identifier) @function.definition)))
+    (call_expression (field_expression (identifier) @function.definition .))
+    (typed_expression . (call_expression (field_expression (identifier) @function.definition .)))
+    (where_expression . (call_expression (field_expression (identifier) @function.definition .)))
+    (where_expression . (typed_expression . (call_expression (field_expression (identifier) @function.definition .))))
+  ]
+  (operator) @keyword.function)
+
 ; Literals
 (boolean_literal) @boolean
 
@@ -515,9 +543,9 @@
 ((identifier) @constant.builtin
   (#any-of? @constant.builtin "nothing" "missing"))
 
-(character_literal) @character
+(character_literal) @string
 
-(escape_sequence) @escape
+(escape_sequence) @string.escape
 
 (string_literal) @string
 
@@ -529,7 +557,7 @@
 (prefixed_command_literal
   prefix: (identifier) @function.macro) @string.special
 
-((string_literal) @string.doc
+((string_literal) @comment.doc
   .
   [
     (module_definition)
@@ -538,6 +566,8 @@
     (function_definition)
     (assignment)
     (const_statement)
+    (open_tuple
+      (identifier))
   ])
 
 [
