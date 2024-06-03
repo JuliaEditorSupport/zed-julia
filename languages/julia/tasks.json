@@ -1,0 +1,13 @@
+[
+  {
+    "label": "julia test",
+    "command": "julia",
+    "args": [
+      "--project=$ZED_WORKTREE_ROOT",
+      "--startup-file=no",
+      "--history-file=no",
+      "-e",
+      "'import Pkg; Pkg.test()'"
+    ]
+  }
+]
