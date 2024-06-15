@@ -189,6 +189,7 @@
     "Exception"
     "ExponentialBackOff"
     "Expr"
+    "FieldError"
     "Float16"
     "Float32"
     "Float64"
