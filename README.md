@@ -3,7 +3,6 @@
 This extension adds support for the [Julia](https://julialang.org/) language in
 the [zed](https://zed.dev) editor.
 
-## Getting started
 
 ### Installing Julia / Zed / Zed Julia extension
 1. Install Julia for your platform: https://julialang.org/downloads/
