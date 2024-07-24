@@ -14,7 +14,7 @@ impl zed::Extension for JuliaExtension {
         worktree: &zed::Worktree,
     ) -> Result<zed::Command> {
         let Some(julia_bin) = worktree.which("julia") else {
-            return Err("julia not available".to_string());
+            return Err("Unable to find julia binary. Make sure the PATH variable contains the directory where the julia binary is located.".to_string());
         };
         Ok(zed::Command {
             command: julia_bin.to_string(),
