@@ -8,7 +8,6 @@ the [zed](https://zed.dev) editor.
 ### Installing Julia / Zed / Zed Julia extension
 1. Install Julia for your platform: https://julialang.org/downloads/
 2. Install Zed for your platform: https://zed.dev/download
-    At the end of this step you should be able to start Zed.
 3. Start Zed.
 4. Inside Zed, go to the extensions view by
 executing the ``zed: extensions`` command (click Zed->Extensions).
