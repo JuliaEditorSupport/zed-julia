@@ -11,6 +11,7 @@
     (const_statement)
     (open_tuple
       (identifier))
+    (identifier)
   ]
   (#match? @content "^\"\"\"")
   (#set! "language" "markdown"))
