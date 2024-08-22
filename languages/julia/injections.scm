@@ -26,3 +26,8 @@
   prefix: (identifier) @_prefix) @content
   (#eq? @_prefix "r")
   (#set! "language" "regex"))
+
+((prefixed_command_literal
+  prefix: (identifier) @_prefix) @content
+  (#eq? @_prefix "sql")
+  (#set! "language" "sql"))
