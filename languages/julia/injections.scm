@@ -18,21 +18,21 @@
 ((macrocall_expression
   (macro_identifier "@" (identifier)) @function.macro
   (macro_argument_list
-   (string_literal) @content
-   (identifier)))
+   .
+   (string_literal) @content))
  (#eq? @function.macro "@doc")
  (#set! "language" "markdown"))
 
 ((source_file
-    (string_literal) @content
-    .
-    (identifier))
+  (string_literal) @content
+  .
+  (identifier))
  (#set! "language" "markdown"))
 
 ((module_definition
-    (string_literal) @content
-    .
-    (identifier))
+  (string_literal) @content
+  .
+  (identifier))
  (#set! "language" "markdown"))
 
 ([
