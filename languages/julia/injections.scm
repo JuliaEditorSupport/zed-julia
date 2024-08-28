@@ -11,10 +11,29 @@
     (const_statement)
     (open_tuple
       (identifier))
-    (identifier)
   ]
   (#match? @content "^\"\"\"")
   (#set! "language" "markdown"))
+
+((macrocall_expression
+  (macro_identifier "@" (identifier)) @function.macro
+  (macro_argument_list
+   (string_literal) @content
+   (identifier)))
+ (#eq? @function.macro "@doc")
+ (#set! "language" "markdown"))
+
+((source_file
+    (string_literal) @content
+    .
+    (identifier))
+ (#set! "language" "markdown"))
+
+((module_definition
+    (string_literal) @content
+    .
+    (identifier))
+ (#set! "language" "markdown"))
 
 ([
   (line_comment)

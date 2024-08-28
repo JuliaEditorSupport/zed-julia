@@ -569,8 +569,24 @@
     (const_statement)
     (open_tuple
       (identifier))
-    (identifier)
   ])
+
+((macrocall_expression
+  (macro_identifier "@" (identifier)) @function.macro
+  (macro_argument_list
+   (string_literal) @comment.doc
+   (identifier)))
+ (#eq? @function.macro "@doc"))
+
+(source_file
+    (string_literal) @comment.doc
+    .
+    (identifier))
+
+(module_definition
+    (string_literal) @comment.doc
+    .
+    (identifier))
 
 [
   (line_comment)
