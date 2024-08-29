@@ -567,26 +567,50 @@
     (function_definition)
     (assignment)
     (const_statement)
-    (open_tuple
-      (identifier))
   ])
 
 ((macrocall_expression
   (macro_identifier "@" (identifier)) @function.macro
   (macro_argument_list
-   .
-   (string_literal) @comment.doc))
- (#eq? @function.macro "@doc"))
+    .
+    (string_literal) @comment.doc))
+  (#eq? @function.macro "@doc"))
 
 (source_file
- (string_literal) @comment.doc
- .
- (identifier))
+  (string_literal) @comment.doc
+  .
+  [
+    (identifier)
+    (open_tuple
+      (identifier))
+  ])
 
 (module_definition
- (string_literal) @comment.doc
- .
- (identifier))
+  (string_literal) @comment.doc
+  .
+  [
+    (identifier)
+    (open_tuple
+      (identifier))
+  ])
+
+(let_statement
+  (string_literal) @comment.doc
+  .
+  [
+    (identifier)
+    (open_tuple
+      (identifier))
+  ])
+
+(compound_statement
+  (string_literal) @comment.doc
+  .
+  [
+    (identifier)
+    (open_tuple
+      (identifier))
+  ])
 
 [
   (line_comment)
