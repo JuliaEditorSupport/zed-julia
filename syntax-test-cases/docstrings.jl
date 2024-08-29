@@ -70,11 +70,5 @@ This _should_ have `markdown` injected!
 x
 end
 
-
 # (call_expression)
 foobar("This should _not_ have `markdown` injected!", x)
-
-# (prefixed_command_literal)
-sql```
-SELECT * FROM t
-```
