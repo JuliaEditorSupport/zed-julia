@@ -41,27 +41,6 @@
   ])
   (#set! "language" "markdown"))
 
-((compound_statement
-  (string_literal) @content
-  .
-  [
-    (identifier)
-    (open_tuple
-      (identifier))
-  ])
-  (#set! "language" "markdown"))
-
-
-((let_statement
-  (string_literal) @content
-  .
-  [
-    (identifier)
-    (open_tuple
-      (identifier))
-  ])
-  (#set! "language" "markdown"))
-
 ([
   (line_comment)
   (block_comment)

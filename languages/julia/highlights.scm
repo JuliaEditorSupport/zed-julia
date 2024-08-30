@@ -594,24 +594,6 @@
       (identifier))
   ])
 
-(let_statement
-  (string_literal) @comment.doc
-  .
-  [
-    (identifier)
-    (open_tuple
-      (identifier))
-  ])
-
-(compound_statement
-  (string_literal) @comment.doc
-  .
-  [
-    (identifier)
-    (open_tuple
-      (identifier))
-  ])
-
 [
   (line_comment)
   (block_comment)
