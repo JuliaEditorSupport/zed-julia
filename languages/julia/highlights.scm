@@ -580,3 +580,7 @@
   (vector_expression
     (identifier) @keyword)
   (#any-of? @keyword "begin" "end"))
+
+(range_expression
+  (identifier) @keyword
+  (#any-of? @keyword "begin" "end"))
