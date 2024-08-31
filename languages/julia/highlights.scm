@@ -575,3 +575,8 @@
   (line_comment)
   (block_comment)
 ] @comment
+
+(index_expression
+  (vector_expression
+    (identifier) @keyword)
+  (#any-of? @keyword "begin" "end"))
