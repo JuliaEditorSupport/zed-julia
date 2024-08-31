@@ -581,6 +581,8 @@
     (identifier) @keyword)
   (#any-of? @keyword "begin" "end"))
 
-(range_expression
-  (identifier) @keyword
+(index_expression
+  (vector_expression
+    (range_expression
+      (identifier) @keyword))
   (#any-of? @keyword "begin" "end"))
