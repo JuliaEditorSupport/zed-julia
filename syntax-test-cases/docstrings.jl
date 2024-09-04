@@ -95,3 +95,7 @@ This _should_ have `markdown` injected!
 This _should_ have `markdown` injected!
 """
 struct A end
+
+@info "This should _not_ have `markdown` injected!"
+
+struct A end

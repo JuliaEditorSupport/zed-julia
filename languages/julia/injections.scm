@@ -46,6 +46,7 @@
 ((module_definition
   (macrocall_expression
     (macro_argument_list
+      (_)+
       (string_literal) @content .))
   .
   [
@@ -65,6 +66,7 @@
 ((source_file
   (macrocall_expression
     (macro_argument_list
+      (_)+
       (string_literal) @content .))
   .
   [

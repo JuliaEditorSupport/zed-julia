@@ -599,6 +599,7 @@
 (module_definition
   (macrocall_expression
     (macro_argument_list
+      (_)+
       (string_literal) @comment.doc .))
   .
   [
@@ -617,6 +618,7 @@
 (source_file
   (macrocall_expression
     (macro_argument_list
+      (_)+
       (string_literal) @comment.doc .))
   .
   [
