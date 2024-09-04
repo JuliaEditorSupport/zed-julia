@@ -55,20 +55,43 @@ x
 end
 
 begin
-# (identifier)
-"""
-This _should_ have `markdown` injected!
-"""
-x
+  # (identifier)
+  """
+  This _should_ have `markdown` injected!
+  """
+  x
 end
 
 let
-# (identifier)
-"""
-This _should_ have `markdown` injected!
-"""
-x
+  # (identifier)
+  """
+  This _should_ have `markdown` injected!
+  """
+  x
 end
 
 # (call_expression)
 foobar("This should _not_ have `markdown` injected!", x)
+
+
+"""
+This _should_ have `markdown` injected!
+"""
+@cxxdereference function f()
+
+end
+
+"""
+This _should_ have `markdown` injected!
+"""
+@kwdef struct A end
+
+# BUG: As of Sep. 2024, top level macro calls will steal literals!
+# The string following this macro call is parsed as an argument to it.
+# https://github.com/JuliaEditorSupport/zed-julia/issues/15
+@qmlfunction foobar
+
+"""
+This _should_ have `markdown` injected!
+"""
+struct A end

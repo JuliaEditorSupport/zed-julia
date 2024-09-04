@@ -26,6 +26,7 @@
   .
   [
     (identifier)
+    (macrocall_expression)
     (open_tuple
       (identifier))
   ])
@@ -36,16 +37,49 @@
   .
   [
       (identifier)
+      (macrocall_expression)
       (open_tuple
         (identifier))
   ])
   (#set! "language" "markdown"))
 
-([
-  (line_comment)
-  (block_comment)
-] @injection.content
-  (#set! "language" "comment"))
+((module_definition
+  (macrocall_expression
+    (macro_argument_list
+      (string_literal) @content .))
+  .
+  [
+    (identifier)
+    (macrocall_expression)
+    (module_definition)
+    (abstract_definition)
+    (struct_definition)
+    (function_definition)
+    (assignment)
+    (const_statement)
+    (open_tuple
+      (identifier))
+  ])
+  (#set! "language" "markdown"))
+
+((source_file
+  (macrocall_expression
+    (macro_argument_list
+      (string_literal) @content .))
+  .
+  [
+    (identifier)
+    (macrocall_expression)
+    (module_definition)
+    (abstract_definition)
+    (struct_definition)
+    (function_definition)
+    (assignment)
+    (const_statement)
+    (open_tuple
+      (identifier))
+  ])
+  (#set! "language" "markdown"))
 
 ((prefixed_string_literal
   prefix: (identifier) @_prefix) @content

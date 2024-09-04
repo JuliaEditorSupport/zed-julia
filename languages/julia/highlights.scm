@@ -581,6 +581,7 @@
   .
   [
     (identifier)
+    (macrocall_expression)
     (open_tuple
       (identifier))
   ])
@@ -590,6 +591,43 @@
   .
   [
     (identifier)
+    (macrocall_expression)
+    (open_tuple
+      (identifier))
+  ])
+
+(module_definition
+  (macrocall_expression
+    (macro_argument_list
+      (string_literal) @comment.doc .))
+  .
+  [
+    (identifier)
+    (macrocall_expression)
+    (module_definition)
+    (abstract_definition)
+    (struct_definition)
+    (function_definition)
+    (assignment)
+    (const_statement)
+    (open_tuple
+      (identifier))
+  ])
+
+(source_file
+  (macrocall_expression
+    (macro_argument_list
+      (string_literal) @comment.doc .))
+  .
+  [
+    (identifier)
+    (macrocall_expression)
+    (module_definition)
+    (abstract_definition)
+    (struct_definition)
+    (function_definition)
+    (assignment)
+    (const_statement)
     (open_tuple
       (identifier))
   ])
