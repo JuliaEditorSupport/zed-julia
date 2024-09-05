@@ -14,3 +14,72 @@ executing the ``zed: extensions`` command (click Zed->Extensions).
 
 The Julia Zed extension looks for your Julia binary in the standard locations.
 Make sure that the Julia binary is on your ``PATH``.
+
+
+### Contributing
+
+See [this document](./CONTRIBUTING.md).
+
+
+### Customizing syntax highlighting
+
+You can change the foreground color and text attributes of syntax tokens in your `~/.config/zed/settings.json`, for instance:
+
+```json
+{
+  "experimental.theme_overrides": {
+    "syntax": {
+      "comment.doc": {
+        "color": "#808080",
+        "font_style": "italic"
+      },
+      "function.definition": {
+        "color": "#0000AA",
+        "font_weight": 700
+      }
+    }
+  }
+}
+```
+Note: the "color" field is mandatory even if you just want to change the "font_style" (the example in Zed's docs does not work).
+
+See [Syntax Highlighting and Themes](https://zed.dev/docs/configuring-languages#syntax-highlighting-and-themes) and [Tree-sitter Queries](https://zed.dev/docs/extensions/languages#tree-sitter-queries) for further details.
+
+Syntax tokens are called *captures* in tree-sitter jargon. The following table lists all captures provided by zed-julia. Some captures have default values (defined in [Zed's color themes](https://github.com/zed-industries/zed/blob/main/assets/themes/)) and the other captures fall back to one of the defaults. Depending on your color theme, some captures may be set to the editor's foreground color or to a very similar one. In this case, try to assign a different color to improve the contrast. 
+
+| Capture | Is there a default value? | Note/Example | 
+| ------- | ------------------------- | ------------ |
+| boolean | yes |
+| comment | yes | line or block comment |
+| comment.doc | yes | docstring |
+| constant.builtin | no, falls back to constant | core julia built-in |
+| function.builtin | no, falls back to function | core julia built-in |
+| function.call | no, falls back to function | name of the called function |
+| function.definition | no, falls back to function | name of the defined function |
+| function.macro | no, falls back to function | name of the macro |
+| keyword | yes |
+| keyword.conditional | no, falls back to keyword | `if`, `else` |
+| keyword.conditional.ternary | no, falls back to keyword | `? :` |
+| keyword.exception | no, falls back to keyword | `try`, `catch` |
+| keyword.function | no, falls back to keyword | `function`, `do`, short function definition: `=` |
+| keyword.import | no, falls back to keyword | `im/export`, `using`, module definition |
+| keyword.operator | no, falls back to keyword | `in`, `isa`, `where` |
+| keyword.repeat | no, falls back to keyword | `for`, `while` |
+| keyword.return | no, falls back to keyword | `return` |
+| number | yes |
+| number.float | no, falls back to number |
+| operator | yes |
+| punctuation.bracket | yes | `()`, `[]`, `{}` |
+| punctuation.delimiter | yes | `,`, `;` |
+| punctuation.special | yes | `.`, `...`, `::`, string interpolation: `$()` |
+| string | yes |
+| string.escape | yes | escape sequence |
+| string.special | yes | command literal |
+| string.special.symbol | yes | quote expression |
+| type | yes |
+| type.builtin | no, falls back to type | core julia built-in |
+| type.definition | no, falls back to type |
+| variable | yes |
+| variable.builtin | no, falls back to variable | core julia built-in |
+| variable.member | no, falls back to variable |
+| variable.parameter | no, falls back to variable |
