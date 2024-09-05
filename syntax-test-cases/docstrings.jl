@@ -95,7 +95,19 @@ This _should_ have `markdown` injected!
 This _should_ have `markdown` injected!
 """
 struct A end
+# We highlight it (correctly) by querying for strings in macrocalls
+# where a valid target for docstrings immediately follow the macrocall.
 
+# BUT!
+# We don't highlight strings in macrocalls if they are the only argument,
+# because this setup is quite common:
 @info "This should _not_ have `markdown` injected!"
+struct A end
 
+# This means that as of now, we are highlighting this setup _incorrectly_!
+@foobar x "This should _not_ have `markdown` injected!"
+struct A end
+
+# But this setup (which is more common) is not broken.
+@foobar "This should _not_ have `markdown` injected!" x
 struct A end
