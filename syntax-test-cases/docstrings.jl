@@ -111,3 +111,7 @@ struct A end
 # But this setup (which is more common) is not broken.
 @foobar "This should _not_ have `markdown` injected!" x
 struct A end
+
+# However, this setup is possibly not that rare, and sadly broken.
+@info "Yo" "This should _not_ have `markdown` injected!"
+struct A end
