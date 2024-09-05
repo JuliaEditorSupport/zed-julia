@@ -7,6 +7,7 @@
     (abstract_definition)
     (struct_definition)
     (function_definition)
+    (macro_definition)
     (assignment)
     (const_statement)
   ]
