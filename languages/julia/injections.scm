@@ -11,7 +11,6 @@
     (module_definition)
     (struct_definition)
   ]
-  (#match? @content "^\"\"\"")
   (#set! "language" "markdown"))
 
 ((macrocall_expression
