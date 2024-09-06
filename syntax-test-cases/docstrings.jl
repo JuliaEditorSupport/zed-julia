@@ -88,14 +88,12 @@ struct A end
 @info "This should _not_ have `markdown` injected!"
 struct A end
 
-# This means that as of now, we are highlighting this setup _incorrectly_!
+# We also don't highlight single-quoted strings as docstrings in this setup,
+# because docstrings are generally triple-quoted.
+# In other words, this is still highlighted correctly:
 @foobar x "This should _not_ have `markdown` injected!"
 struct A end
 
-# But this setup (which is more common) is not broken.
-@info "This should _not_ have `markdown` injected!" x
-struct A end
-
-# However, this setup is possibly not that rare, and sadly broken.
-@info "Yo" "This should _not_ have `markdown` injected!"
+# However, this rare setup is currently highlighted incorrectly.
+@info "Yo" """This should _not_ have `markdown` injected!"""
 struct A end

@@ -430,7 +430,7 @@
       (identifier))
   ])
 
-(module_definition
+((module_definition
   (macrocall_expression
     (macro_argument_list
       (_)+
@@ -448,8 +448,9 @@
     (open_tuple
       (identifier))
   ])
+  (#match? @comment.doc "^\"\"\""))
 
-(source_file
+((source_file
   (macrocall_expression
     (macro_argument_list
       (_)+
@@ -467,6 +468,7 @@
     (open_tuple
       (identifier))
   ])
+  (#match? @comment.doc "^\"\"\""))
 
 [
   (line_comment)

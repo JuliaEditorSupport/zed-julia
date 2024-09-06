@@ -62,6 +62,7 @@
     (open_tuple
       (identifier))
   ])
+  (#match? @content "^\"\"\"")
   (#set! "language" "markdown"))
 
 ((source_file
@@ -82,6 +83,7 @@
     (open_tuple
       (identifier))
   ])
+  (#match? @content "^\"\"\"")
   (#set! "language" "markdown"))
 
 ((prefixed_string_literal
