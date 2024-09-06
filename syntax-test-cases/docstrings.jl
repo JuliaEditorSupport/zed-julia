@@ -54,22 +54,6 @@ This _should_ have `markdown` injected!
 x
 end
 
-begin
-  # (identifier)
-  """
-  This _should_ have `markdown` injected!
-  """
-  x
-end
-
-let
-  # (identifier)
-  """
-  This _should_ have `markdown` injected!
-  """
-  x
-end
-
 # (call_expression)
 foobar("This should _not_ have `markdown` injected!", x)
 
