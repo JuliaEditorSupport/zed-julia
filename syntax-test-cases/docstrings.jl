@@ -97,3 +97,7 @@ struct A end
 # However, this rare setup is currently highlighted incorrectly.
 @info "Yo" """This should _not_ have `markdown` injected!"""
 struct A end
+
+# Only the docstrings stolen by macros have this restriction applied, so
+# for example the following still works:
+@doc "This _should_ have `markdown` injected!" foobar
