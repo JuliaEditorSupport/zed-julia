@@ -386,19 +386,6 @@
 (prefixed_command_literal
   prefix: (identifier) @function.macro) @string.special
 
-; TODO: Substitute NVIM's @string.documentation with Zed's @comment.doc
-((string_literal) @comment.doc
-  .
-  [
-    (abstract_definition)
-    (assignment)
-    (const_statement)
-    (function_definition)
-    (macro_definition)
-    (module_definition)
-    (struct_definition)
-  ])
-
 ; TODO
 ; Docstrings
 ((macrocall_expression
