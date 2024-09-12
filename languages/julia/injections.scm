@@ -1,18 +1,3 @@
-; Inject markdown in docstrings
-; Be aware that this will clutter the outline view with markdown headers.
-((string_literal) @content
-  .
-  [
-    (abstract_definition)
-    (assignment)
-    (const_statement)
-    (function_definition)
-    (macro_definition)
-    (module_definition)
-    (struct_definition)
-  ]
-  (#set! "language" "markdown"))
-
 ((macrocall_expression
   (macro_identifier "@" (identifier)) @function.macro
   (macro_argument_list
