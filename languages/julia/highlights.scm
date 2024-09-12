@@ -386,8 +386,8 @@
 (prefixed_command_literal
   prefix: (identifier) @function.macro) @string.special
 
-; TODO
-; Docstrings
+; doc macro docstrings:
+; @doc "..." x
 ((macrocall_expression
   (macro_identifier "@" (identifier)) @function.macro
   (macro_argument_list
@@ -395,67 +395,63 @@
     (string_literal) @comment.doc))
   (#eq? @function.macro "@doc"))
 
-; TODO continued
+; docstrings preceding documentable elements at the top of a source file:
 (source_file
-  (string_literal) @comment.doc
-  .
+  ; The Docstring:
   [
+    (string_literal) @comment.doc
+    ; Workaroud: Find strings stolen as the last argument to a preceding macro
+    ; https://github.com/tree-sitter/tree-sitter-julia/issues/150
+    (macrocall_expression
+      (macro_argument_list
+      (_)+
+      (string_literal) @comment.doc .))
+  ]
+  .
+  ; The documentable element:
+  [
+    (assignment)
+    (const_statement)
+    (global_statement)
+    (abstract_definition)
+    (function_definition)
+    (macro_definition)
+    (module_definition)
+    (struct_definition)
+    (macrocall_expression) ; Covers things like @kwdef struct X ... end
     (identifier)
-    (macrocall_expression)
     (open_tuple
       (identifier))
   ])
 
-; TODO continued
+; docstrings preceding documentable elements at the top of a module:
 (module_definition
-  (string_literal) @comment.doc
-  .
+  ; The Docstring:
   [
-    (identifier)
-    (macrocall_expression)
-    (open_tuple
-      (identifier))
-  ])
-
-((module_definition
-  (macrocall_expression
-    (macro_argument_list
+    (string_literal) @comment.doc
+    ; Workaroud: Find strings stolen as the last argument to a preceding macro
+    ; https://github.com/tree-sitter/tree-sitter-julia/issues/150
+    (macrocall_expression
+      (macro_argument_list
       (_)+
       (string_literal) @comment.doc .))
+  ]
   .
+  ; The documentable element:
   [
-    (identifier)
-    (macrocall_expression)
-    (module_definition)
-    (abstract_definition)
-    (struct_definition)
-    (function_definition)
     (assignment)
     (const_statement)
+    (global_statement)
+    (abstract_definition)
+    (function_definition)
+    (macro_definition)
+    (module_definition)
+    (struct_definition)
+    (macrocall_expression) ; Covers things like @kwdef struct X ... end
+    (identifier)
     (open_tuple
       (identifier))
   ])
-  (#match? @comment.doc "^\"\"\""))
-
-((source_file
-  (macrocall_expression
-    (macro_argument_list
-      (_)+
-      (string_literal) @comment.doc .))
-  .
-  [
-    (identifier)
-    (macrocall_expression)
-    (module_definition)
-    (abstract_definition)
-    (struct_definition)
-    (function_definition)
-    (assignment)
-    (const_statement)
-    (open_tuple
-      (identifier))
-  ])
-  (#match? @comment.doc "^\"\"\""))
 
 [
   (line_comment)
