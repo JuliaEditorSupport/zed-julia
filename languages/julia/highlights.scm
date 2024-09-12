@@ -396,7 +396,7 @@
   (#eq? @function.macro "@doc"))
 
 ; docstrings preceding documentable elements at the top of a source file:
-(source_file
+((source_file
   ; The Docstring:
   [
     (string_literal) @comment.doc
@@ -423,9 +423,10 @@
     (open_tuple
       (identifier))
   ])
+  (#match? @comment.doc "^\"\"\""))
 
 ; docstrings preceding documentable elements at the top of a module:
-(module_definition
+((module_definition
   ; The Docstring:
   [
     (string_literal) @comment.doc
@@ -452,6 +453,7 @@
     (open_tuple
       (identifier))
   ])
+  (#match? @comment.doc "^\"\"\""))
 
 [
   (line_comment)

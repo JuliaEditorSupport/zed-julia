@@ -84,34 +84,37 @@ struct A end
 
 # BUT!
 # We don't highlight strings in macrocalls if they are the only argument,
-# because this setup is quite common:
-@info "This should _not_ have `markdown` injected!"
+# because this setup is quite plausible:
+@info """
+This should _not_ have `markdown` injected!
+"""
+
 struct A end
 
 # We also don't highlight single-quoted strings as docstrings in this setup,
-# because docstrings are generally triple-quoted.
+# because docstrings are _usually_ triple-quoted.
 # In other words, this is still highlighted correctly:
 @foobar x "This should _not_ have `markdown` injected!"
+
 struct A end
 
 # However, this rare setup is currently highlighted INCORRECTLY.
-@info "Yo" """This should _not_ have `markdown` injected!"""
+@foobar "Yo" """This should _not_ have `markdown` injected!"""
+
 struct A end
 
 # Only the docstrings stolen by macros have this restriction applied, so
-# for example the following still works:
+# for example the following still works: (using the @doc macro)
 @doc "This _should_ have `markdown` injected!" foobar
 
-# And the following also works, if the docstring is not stolen:
+# After cleaning up the queries, the single-quote restriction also applies
+# to top level docstrings preceding documentable items. The following is
+# highlighed INCORRECTLY:
 "This _should_ have `markdown` injected!"
 function foobar end
 
+# As is this:
+module X
 "This _should_ have `markdown` injected!"
 foobar
-
-# However, if a single-quoted docstring is stolen, it is currently
-# highlighted INCORRECTLY:
-@info "Yo"
-
-"This _should_ have `markdown` injected!"
-foobar
+end
