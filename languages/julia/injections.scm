@@ -1,11 +1,11 @@
 ; doc macro docstrings:
 ; @doc "..." x
 ((macrocall_expression
-  (macro_identifier "@" (identifier)) @function.macro
+  (macro_identifier "@" (identifier)) @_macro
   (macro_argument_list
     .
     (string_literal) @content))
-  (#eq? @function.macro "@doc")
+  (#eq? @_macro "@doc")
   (#set! "language" "markdown"))
 
 
