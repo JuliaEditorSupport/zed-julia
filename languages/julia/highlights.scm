@@ -386,21 +386,8 @@
 (prefixed_command_literal
   prefix: (identifier) @function.macro) @string.special
 
-; TODO: Substitute NVIM's @string.documentation with Zed's @comment.doc
-((string_literal) @comment.doc
-  .
-  [
-    (abstract_definition)
-    (assignment)
-    (const_statement)
-    (function_definition)
-    (macro_definition)
-    (module_definition)
-    (struct_definition)
-  ])
-
-; TODO
-; Docstrings
+; doc macro docstrings:
+; @doc "..." x
 ((macrocall_expression
   (macro_identifier "@" (identifier)) @function.macro
   (macro_argument_list
@@ -408,25 +395,65 @@
     (string_literal) @comment.doc))
   (#eq? @function.macro "@doc"))
 
-; TODO continued
-(source_file
-  (string_literal) @comment.doc
-  .
+; docstrings preceding documentable elements at the top of a source file:
+((source_file
+  ; The Docstring:
   [
+    (string_literal) @comment.doc
+    ; Workaroud: Find strings stolen as the last argument to a preceding macro
+    ; https://github.com/tree-sitter/tree-sitter-julia/issues/150
+    (macrocall_expression
+      (macro_argument_list
+      (_)+
+      (string_literal) @comment.doc .))
+  ]
+  .
+  ; The documentable element:
+  [
+    (assignment)
+    (const_statement)
+    (global_statement)
+    (abstract_definition)
+    (function_definition)
+    (macro_definition)
+    (module_definition)
+    (struct_definition)
+    (macrocall_expression) ; Covers things like @kwdef struct X ... end
     (identifier)
     (open_tuple
       (identifier))
   ])
+  (#match? @comment.doc "^\"\"\""))
 
-; TODO continued
-(module_definition
-  (string_literal) @comment.doc
-  .
+; docstrings preceding documentable elements at the top of a module:
+((module_definition
+  ; The Docstring:
   [
+    (string_literal) @comment.doc
+    ; Workaroud: Find strings stolen as the last argument to a preceding macro
+    ; https://github.com/tree-sitter/tree-sitter-julia/issues/150
+    (macrocall_expression
+      (macro_argument_list
+      (_)+
+      (string_literal) @comment.doc .))
+  ]
+  .
+  ; The documentable element:
+  [
+    (assignment)
+    (const_statement)
+    (global_statement)
+    (abstract_definition)
+    (function_definition)
+    (macro_definition)
+    (module_definition)
+    (struct_definition)
+    (macrocall_expression) ; Covers things like @kwdef struct X ... end
     (identifier)
     (open_tuple
       (identifier))
   ])
+  (#match? @comment.doc "^\"\"\""))
 
 [
   (line_comment)
