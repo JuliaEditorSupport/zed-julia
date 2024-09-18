@@ -1,7 +1,12 @@
-; Guidelines:
-; - No highlighting is better than ambiguous highlighting.
-; - Only names defined in `Core` should be highlighted as `builtin`.
+; Most content in this file is borrowed from the reference queries in
+; https://github.com/tree-sitter/tree-sitter-julia/blob/master/queries/highlights.scm
 ;
+; Search for "Zed" to see changes and additions. For instance, some captures
+; have different names in Zed and in the reference which is based on Neovim.
+;
+; Please mark future deviations from the reference with "Zed" when making
+; changes here.
+
 ; Identifiers
 (identifier) @variable
 
@@ -31,8 +36,7 @@
   (field_expression
     (identifier) @function.call .))
 
-; TODO
-; Function calls in pipes
+; Zed - added: Function calls in pipes
 (binary_expression
   (_)
   (operator) @_pipe
@@ -42,8 +46,7 @@
 ; Macros
 (macro_identifier) @function.macro
 
-; TODO
-; Required to highlight the macro name, not just the @
+; Zed - added: Highlight the macro name, not just the @
 (macro_identifier
   (identifier) @function.macro)
 
@@ -60,16 +63,6 @@
     "applicable" "fieldtype" "getfield" "getglobal" "invoke" "isa" "isdefined" "modifyfield!"
     "modifyglobal!" "nfields" "replacefield!" "replaceglobal!" "setfield!" "setfieldonce!"
     "setglobal!" "setglobalonce!" "swapfield!" "swapglobal!" "throw" "tuple" "typeassert" "typeof"))
-
-; TODO
-; Parameters, I think we can drop both:
-(argument_list
-  (identifier) @variable.parameter)
-
-; TODO continued
-(function_expression
-  .
-  (identifier) @variable.parameter) ; Single parameter arrow functions
 
 ; Type definitions
 (abstract_definition
@@ -259,7 +252,7 @@
     "mutable"
     "struct"
     "end"
-  ] @keyword.type)
+  ] @keyword) ; Zed - changed `@keyword.type` to `@keyword`
 
 
 ; Operators & Punctuation
@@ -296,8 +289,7 @@
   "}"
 ] @punctuation.bracket
 
-; TODO
-; Interpolated variables and complex expressions
+; Zed - added: Interpolated variables and expressions in parentheses
 (string_interpolation
 [
   "$"
@@ -305,22 +297,24 @@
   ")"
 ] @punctuation.special)
 
-; TODO
-; Match the dot in the @. macro
+; Zed - added: Match the dot in the @. macro
 (macro_identifier
   (operator) @function.macro (#eq? @function.macro "."))
 
-; TODO
-; Function definitions like `function foo() ...` or `function Base.show() ...`
-(signature
-  (call_expression
+; Zed - added: Function definitions
+; (1) `function foo end` after docstrings
+; (2) `function foo() ... end`
+; (3) `function Base.show() ... end`
+(function_definition
+  (signature
+    .
     [
       (identifier) @function.definition
-      (field_expression (identifier) @function.definition .)
+      (call_expression (identifier) @function.definition)
+      (call_expression (field_expression (identifier) @function.definition .))
     ]))
 
-; TODO
-; Short function definitions like `foo(x) = 2x`
+; Zed - added: Short function definitions like `foo(x) = 2x`
 (assignment
   .
   [
@@ -352,14 +346,9 @@
 ((identifier) @constant.builtin
   (#any-of? @constant.builtin "nothing" "missing"))
 
-; begin/end indices
 ((identifier) @variable.builtin
   (#any-of? @variable.builtin "begin" "end")
   (#has-ancestor? @variable.builtin index_expression))
-
-((identifier) @variable.builtin
-  (#any-of? @variable.builtin "begin" "end")
-  (#has-ancestor? @variable.builtin range_expression))
 
 ; Literals
 (boolean_literal) @boolean
@@ -371,8 +360,7 @@
 ((identifier) @number.float
   (#any-of? @number.float "NaN" "NaN16" "NaN32" "Inf" "Inf16" "Inf32"))
 
-; TODO: Substitute NVIM's @character with Zed's @string
-(character_literal) @string
+(character_literal) @string ; Zed - changed `@character` to `@string`
 
 (escape_sequence) @string.escape
 
@@ -386,7 +374,9 @@
 (prefixed_command_literal
   prefix: (identifier) @function.macro) @string.special
 
-; doc macro docstrings:
+; Zed - modified queries for docstrings (3 queries):
+
+; (1) doc macro docstrings:
 ; @doc "..." x
 ((macrocall_expression
   (macro_identifier "@" (identifier)) @function.macro
@@ -395,7 +385,7 @@
     (string_literal) @comment.doc))
   (#eq? @function.macro "@doc"))
 
-; docstrings preceding documentable elements at the top of a source file:
+; (2) docstrings preceding documentable elements at the top of a source file:
 ((source_file
   ; The Docstring:
   [
@@ -425,7 +415,7 @@
   ])
   (#match? @comment.doc "^\"\"\""))
 
-; docstrings preceding documentable elements at the top of a module:
+; (3) docstrings preceding documentable elements at the top of a module:
 ((module_definition
   ; The Docstring:
   [

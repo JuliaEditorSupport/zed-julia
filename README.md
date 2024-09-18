@@ -80,6 +80,5 @@ Syntax tokens are called *captures* in tree-sitter jargon. The following table l
 | type.builtin | no, falls back to type | core julia built-in |
 | type.definition | no, falls back to type |
 | variable | yes |
-| variable.builtin | no, falls back to variable | core julia built-in |
-| variable.member | no, falls back to variable |
-| variable.parameter | no, falls back to variable |
+| variable.builtin | no, falls back to variable | core julia built-in: `begin` and `end` in indices |
+| variable.member | no, falls back to variable | example: in `foo.bar`, the member is `bar` |
