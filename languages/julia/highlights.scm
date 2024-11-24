@@ -233,7 +233,10 @@
   ] @keyword.import)
 
 (export_statement
-  "export" @keyword.import)
+  [
+    "export"
+    "public"
+   ] @keyword.import)
 
 (import_statement
   [
