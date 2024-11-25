@@ -8,21 +8,10 @@
   (#eq? @_macro "@doc")
   (#set! "language" "markdown"))
 
-
 ; docstrings preceding documentable elements at the top of a source file:
 ((source_file
-  ; The Docstring:
-  [
-    (string_literal) @content
-    ; Workaroud: Find strings stolen as the last argument to a preceding macro
-    ; https://github.com/tree-sitter/tree-sitter-julia/issues/150
-    (macrocall_expression
-      (macro_argument_list
-      (_)+
-      (string_literal) @content .))
-  ]
+  (string_literal) @content
   .
-  ; The documentable element:
   [
     (assignment)
     (const_statement)
@@ -37,23 +26,12 @@
     (open_tuple
       (identifier))
   ])
-  (#match? @content "^\"\"\"")
   (#set! "language" "markdown"))
 
 ; docstrings preceding documentable elements at the top of a module:
 ((module_definition
-  ; The Docstring:
-  [
-    (string_literal) @content
-    ; Workaroud: Find strings stolen as the last argument to a preceding macro
-    ; https://github.com/tree-sitter/tree-sitter-julia/issues/150
-    (macrocall_expression
-      (macro_argument_list
-      (_)+
-      (string_literal) @content .))
-  ]
+  (string_literal) @content
   .
-  ; The documentable element:
   [
     (assignment)
     (const_statement)
@@ -68,7 +46,12 @@
     (open_tuple
       (identifier))
   ])
-  (#match? @content "^\"\"\"")
+  (#set! "language" "markdown"))
+
+; Markdown Language Injection
+((prefixed_string_literal
+  prefix: (identifier) @_prefix) @content
+  (#eq? @_prefix "md")
   (#set! "language" "markdown"))
 
 ; Regex Language Injection
