@@ -44,11 +44,9 @@
   (#any-of? @_pipe "|>" ".|>"))
 
 ; Macros
-(macro_identifier) @function.macro
-
-; Zed - added: Highlight the macro name, not just the @
 (macro_identifier
-  (identifier) @function.macro)
+  "@" @function.macro
+  (_) @function.macro)
 
 (macro_definition
   (signature
@@ -65,21 +63,7 @@
     "setglobal!" "setglobalonce!" "swapfield!" "swapglobal!" "throw" "tuple" "typeassert" "typeof"))
 
 ; Type definitions
-(abstract_definition
-  name: (identifier) @type.definition) @keyword
-
-(primitive_definition
-  name: (identifier) @type.definition) @keyword
-
-(struct_definition
-  name: (identifier) @type.definition)
-
-(type_clause
-  [
-    (identifier) @type
-    (field_expression
-      (identifier) @type .)
-  ])
+(type_head (_) @type.definition)
 
 ; Type annotations
 (parametrized_type_expression
@@ -91,21 +75,20 @@
   (curly_expression
     (_) @type))
 
-(type_parameter_list
-  (identifier) @type)
-
 (typed_expression
   (identifier) @type .)
 
 (unary_typed_expression
   (identifier) @type .)
 
-(where_clause
-  (identifier) @type)
+(where_expression
+  (_) @type .)
 
-(where_clause
-  (curly_expression
-    (_) @type))
+(binary_expression
+  (_) @type
+  (operator) @operator
+  (_) @type
+  (#any-of? @operator "<:" ">:"))
 
 ; Built-in types
 ; filter(name -> typeof(Base.eval(Core, name)) in [DataType, UnionAll], names(Core))
@@ -235,11 +218,14 @@
 (export_statement
   "export" @keyword.import)
 
+(public_statement
+  "public" @keyword.import)
+
 (import_statement
-  [
-    "import"
-    "using"
-  ] @keyword.import)
+  "import" @keyword.import)
+
+(using_statement
+  "using" @keyword.import)
 
 (import_alias
   "as" @keyword.import)
@@ -254,14 +240,22 @@
     "end"
   ] @keyword) ; Zed - changed `@keyword.type` to `@keyword`
 
+(abstract_definition
+  [
+    "abstract"
+    "type"
+    "end"
+  ] @keyword.type)
+
+(primitive_definition
+  [
+    "primitive"
+    "type"
+    "end"
+  ] @keyword.type)
 
 ; Operators & Punctuation
-[
-  "->"
-  "="
-  "∈"
-  (operator)
-] @operator
+(operator) @operator
 
 (adjoint_expression
   "'" @operator)
@@ -269,11 +263,14 @@
 (range_expression
   ":" @operator)
 
+(arrow_function_expression
+  "->" @operator)
+
 [
   "."
   "..."
   "::"
-] @punctuation.special
+] @punctuation
 
 [
   ","
@@ -299,7 +296,8 @@
 
 ; Zed - added: Match the dot in the @. macro
 (macro_identifier
-  (operator) @function.macro (#eq? @function.macro "."))
+  "@"
+  (operator "." @function.macro))
 
 ; Zed - added: Function definitions
 ; (1) `function foo end` after docstrings
@@ -332,12 +330,6 @@
 ; Keyword operators
 ((operator) @keyword.operator
   (#any-of? @keyword.operator "in" "isa"))
-
-(for_binding
-  "in" @keyword.operator)
-
-(where_clause
-  "where" @keyword.operator)
 
 (where_expression
   "where" @keyword.operator)
@@ -386,19 +378,9 @@
   (#eq? @function.macro "@doc"))
 
 ; (2) docstrings preceding documentable elements at the top of a source file:
-((source_file
-  ; The Docstring:
-  [
-    (string_literal) @comment.doc
-    ; Workaroud: Find strings stolen as the last argument to a preceding macro
-    ; https://github.com/tree-sitter/tree-sitter-julia/issues/150
-    (macrocall_expression
-      (macro_argument_list
-      (_)+
-      (string_literal) @comment.doc .))
-  ]
+(source_file
+  (string_literal) @comment.doc
   .
-  ; The documentable element:
   [
     (assignment)
     (const_statement)
@@ -413,22 +395,11 @@
     (open_tuple
       (identifier))
   ])
-  (#match? @comment.doc "^\"\"\""))
 
 ; (3) docstrings preceding documentable elements at the top of a module:
-((module_definition
-  ; The Docstring:
-  [
-    (string_literal) @comment.doc
-    ; Workaroud: Find strings stolen as the last argument to a preceding macro
-    ; https://github.com/tree-sitter/tree-sitter-julia/issues/150
-    (macrocall_expression
-      (macro_argument_list
-      (_)+
-      (string_literal) @comment.doc .))
-  ]
+(module_definition
+  (string_literal) @comment.doc
   .
-  ; The documentable element:
   [
     (assignment)
     (const_statement)
@@ -443,7 +414,6 @@
     (open_tuple
       (identifier))
   ])
-  (#match? @comment.doc "^\"\"\""))
 
 [
   (line_comment)
