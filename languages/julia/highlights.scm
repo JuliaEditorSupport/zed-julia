@@ -374,7 +374,7 @@
   (macro_identifier "@" (identifier)) @function.macro
   (macro_argument_list
     .
-    (string_literal) @comment.doc))
+    [(string_literal) (prefixed_string_literal)] @comment.doc))
   (#eq? @function.macro "@doc"))
 
 ; (2) docstrings preceding documentable elements at the top of a source file:
