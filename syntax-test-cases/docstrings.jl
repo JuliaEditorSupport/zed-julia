@@ -96,8 +96,10 @@ struct A end
 
 struct A end
 
-# Special case when using the @doc macro:
+# Special cases when using the @doc macro:
 @doc "This _should_ have `markdown` injected!" foobar
+@doc """This _should_ have `markdown` injected!""" foobar
+@doc raw"""This _should_ have `markdown` injected!""" foobar
 
 # Docstrings may be single-quoted:
 "This _should_ have `markdown` injected!"
