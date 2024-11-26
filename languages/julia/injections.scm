@@ -4,7 +4,7 @@
   (macro_identifier "@" (identifier)) @_macro
   (macro_argument_list
     .
-    (string_literal) @content))
+    [(string_literal) (prefixed_string_literal)] @content))
   (#eq? @_macro "@doc")
   (#set! "language" "markdown"))
 
