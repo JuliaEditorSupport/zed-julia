@@ -48,11 +48,29 @@
   ])
   (#set! "language" "markdown"))
 
+; HTML Language Injection
+((prefixed_string_literal
+  prefix: (identifier) @_prefix) @content
+  (#eq? @_prefix "html")
+  (#set! "language" "html"))
+
+; LaTeX Language Injection (LaTeXStrings.jl)
+((prefixed_string_literal
+  prefix: (identifier) @_prefix) @content
+  (#eq? @_prefix "L")
+  (#set! "language" "latex"))
+
 ; Markdown Language Injection
 ((prefixed_string_literal
   prefix: (identifier) @_prefix) @content
   (#eq? @_prefix "md")
   (#set! "language" "markdown"))
+
+; Python Language Injection (PyCall.jl)
+((prefixed_string_literal
+  prefix: (identifier) @_prefix) @content
+  (#eq? @_prefix "py")
+  (#set! "language" "python"))
 
 ; Regex Language Injection
 ((prefixed_string_literal
@@ -60,7 +78,7 @@
   (#eq? @_prefix "r")
   (#set! "language" "regex"))
 
-; SQL Language Injection
+; SQL Language Injection (SQLStrings.jl)
 ((prefixed_command_literal
   prefix: (identifier) @_prefix) @content
   (#eq? @_prefix "sql")
