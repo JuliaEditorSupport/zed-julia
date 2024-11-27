@@ -4,25 +4,14 @@
   (macro_identifier "@" (identifier)) @_macro
   (macro_argument_list
     .
-    (string_literal) @content))
+    [(string_literal) (prefixed_string_literal)] @content))
   (#eq? @_macro "@doc")
   (#set! "language" "markdown"))
 
-
 ; docstrings preceding documentable elements at the top of a source file:
 ((source_file
-  ; The Docstring:
-  [
-    (string_literal) @content
-    ; Workaroud: Find strings stolen as the last argument to a preceding macro
-    ; https://github.com/tree-sitter/tree-sitter-julia/issues/150
-    (macrocall_expression
-      (macro_argument_list
-      (_)+
-      (string_literal) @content .))
-  ]
+  (string_literal) @content
   .
-  ; The documentable element:
   [
     (assignment)
     (const_statement)
@@ -37,23 +26,12 @@
     (open_tuple
       (identifier))
   ])
-  (#match? @content "^\"\"\"")
   (#set! "language" "markdown"))
 
 ; docstrings preceding documentable elements at the top of a module:
 ((module_definition
-  ; The Docstring:
-  [
-    (string_literal) @content
-    ; Workaroud: Find strings stolen as the last argument to a preceding macro
-    ; https://github.com/tree-sitter/tree-sitter-julia/issues/150
-    (macrocall_expression
-      (macro_argument_list
-      (_)+
-      (string_literal) @content .))
-  ]
+  (string_literal) @content
   .
-  ; The documentable element:
   [
     (assignment)
     (const_statement)
@@ -68,8 +46,31 @@
     (open_tuple
       (identifier))
   ])
-  (#match? @content "^\"\"\"")
   (#set! "language" "markdown"))
+
+; HTML Language Injection
+((prefixed_string_literal
+  prefix: (identifier) @_prefix) @content
+  (#eq? @_prefix "html")
+  (#set! "language" "html"))
+
+; LaTeX Language Injection (LaTeXStrings.jl)
+((prefixed_string_literal
+  prefix: (identifier) @_prefix) @content
+  (#eq? @_prefix "L")
+  (#set! "language" "latex"))
+
+; Markdown Language Injection
+((prefixed_string_literal
+  prefix: (identifier) @_prefix) @content
+  (#eq? @_prefix "md")
+  (#set! "language" "markdown"))
+
+; Python Language Injection (PyCall.jl)
+((prefixed_string_literal
+  prefix: (identifier) @_prefix) @content
+  (#eq? @_prefix "py")
+  (#set! "language" "python"))
 
 ; Regex Language Injection
 ((prefixed_string_literal
@@ -77,7 +78,7 @@
   (#eq? @_prefix "r")
   (#set! "language" "regex"))
 
-; SQL Language Injection
+; SQL Language Injection (SQLStrings.jl)
 ((prefixed_command_literal
   prefix: (identifier) @_prefix) @content
   (#eq? @_prefix "sql")

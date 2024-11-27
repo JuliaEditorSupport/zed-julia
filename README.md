@@ -71,7 +71,7 @@ Syntax tokens are called *captures* in tree-sitter jargon. The following table l
 | operator | yes |
 | punctuation.bracket | yes | `()`, `[]`, `{}` |
 | punctuation.delimiter | yes | `,`, `;` |
-| punctuation.special | yes | `.`, `...`, `::`, string interpolation: `$()` |
+| punctuation.special | yes | string interpolation: `$()` |
 | string | yes |
 | string.escape | yes | escape sequence |
 | string.special | yes | command literal |

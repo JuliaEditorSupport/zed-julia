@@ -1,5 +1,13 @@
+(using_statement
+  "using" @context
+  [
+   (selected_import (_) @name ":" @context)
+   (( [(identifier) (scoped_identifier) (import_path)] @name  "," @context)*
+      [(identifier) (scoped_identifier) (import_path)] @name)
+  ]) @item
+
 (import_statement
-  ["using" "import"] @context
+  "import" @context
   [
    (selected_import (_) @name ":" @context)
    (( [(identifier) (scoped_identifier) (import_path)] @name  "," @context)*
@@ -10,16 +18,26 @@
   ["module" "baremodule"] @context
   name: (identifier) @name) @item
 
-(primitive_definition
-  "primitive" @context
-  "type" @context
-  name: (identifier) @name) @item
-
 (abstract_definition
   "abstract" @context
   "type" @context
-  name: (identifier) @name
-  (type_clause)? @context) @item
+  (type_head
+    (binary_expression
+      .
+      (identifier) @name))) @item
+
+(primitive_definition
+  "primitive" @context
+  "type" @context
+  (type_head
+    (binary_expression
+      .
+      (identifier) @name))) @item
+
+(struct_definition
+  "mutable"? @context
+  "struct" @context
+  (type_head) @name) @item
 
 (function_definition
   "function" @context
@@ -62,12 +80,6 @@
       (argument_list)? @context)
     (_)* @context ; match the rest of the signature e.g., return_type
   )) @item
-
-(struct_definition
-  "mutable"? @context
-  "struct" @context
-  name: (_) @name
-  (type_parameter_list)? @context) @item
 
 (const_statement
   "const" @context
