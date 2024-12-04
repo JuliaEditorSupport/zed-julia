@@ -35,7 +35,13 @@ impl zed::Extension for JuliaExtension {
                     Pkg.add(Pkg.PackageSpec(uuid=ls_uuid))
                 end
 
-                using LanguageServer
+                try
+                    @eval using LanguageServer
+                catch
+                    Pkg.update()
+                    @eval using LanguageServer
+                end
+
                 runserver()
                 "#
                 .to_string(),
