@@ -36,12 +36,12 @@ impl zed::Extension for JuliaExtension {
                 end
 
                 try
-                    Pkg.precompile()
+                    @eval using LanguageServer
                 catch
                     Pkg.update()
+                    @eval using LanguageServer
                 end
 
-                using LanguageServer
                 runserver()
                 "#
                 .to_string(),
