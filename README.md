@@ -21,6 +21,20 @@ Make sure that the Julia binary is on your ``PATH``.
 See [this document](./CONTRIBUTING.md).
 
 
+### Using Zed in the REPL
+
+Zed is currently not on the list of Julia's predefined editors. You can add it to your `~/.julia/config/startup.jl`:
+
+```julia
+atreplinit() do repl
+    InteractiveUtils.define_editor("zed") do cmd, path, line, column
+        `$cmd $path:$line:$column`
+    end
+end
+```
+
+Set the environment variable EDITOR (or VISUAL or JULIA_EDITOR, whatever you use) to `zed --wait`. Then, using `InteractiveUtils.edit` etc. will open the document in Zed.
+
 ### Customizing syntax highlighting
 
 You can change the foreground color and text attributes of syntax tokens in your `~/.config/zed/settings.json`, for instance:
