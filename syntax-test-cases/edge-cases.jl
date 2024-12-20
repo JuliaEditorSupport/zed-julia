@@ -8,7 +8,7 @@ begin
     # this is a block, not an index
 end
 
-# ------------ 
+# ------------
 # Zed specials
 # ------------
 
@@ -31,8 +31,30 @@ x = var .|> foo |> bar
 # Function definitions
 # (highlight the function name as @function.definition)
 function foo end
-function foo(x) 2x end
-function Base.foo(x) 2x end
+function foo(x)
+    2x
+end
+function Base.foo(x)
+    2x
+end
+
+# Types
+struct Bar
+    a::T
+    b::Module.T # pass
+    c::Module.Submodule.T # pass
+    d::Module.Submodule.SubModule.SubSubModule.T # broken
+    e::Module.Submodule.T{Int} # pass
+    f::Module.Submodule.T{Module.Int} # pass
+    g::Module.Submodule.T{Module.SubModule.Int} # pass
+    h::Module.Submodule.T{Module.SubModule.SubSubModule.Int} # broken
+end
+
+function bar(w::T) end
+function bar(x::Module.T) nothing end
+function bar(y::Module.Submodule.T) nothing end
+function bar(z::Module.Submodule.T{Int}) nothing end
+
 
 # Short function definitions
 # (highlight the function name as @function.definition
@@ -89,3 +111,5 @@ Docstring with `markdown`.
 Docstring with `markdown`.
 """
 function Base.foo18() end
+
+module A end

@@ -68,15 +68,27 @@
 ; Type annotations
 (parametrized_type_expression
   [
-   (identifier) @type
-   (field_expression
-     (identifier) @type .)
+    (identifier) @type
+    (field_expression (identifier) @type (identifier) @type)
+    (field_expression ((field_expression (identifier) @type (identifier) @type) (identifier) @type))
+    (_) @type
   ]
   (curly_expression
-    (_) @type))
+    [
+      (identifier) @type
+      (field_expression (identifier) @type (identifier) @type)
+      (field_expression ((field_expression (identifier) @type (identifier) @type) (identifier) @type))
+      (_) @type
+    ]))
 
 (typed_expression
-  (identifier) @type .)
+  (identifier)
+    [
+      (identifier) @type ; x::T, it tags T as type
+      (field_expression (identifier) @type (identifier) @type) ; x::Module.T, it tags Module and T as type
+      (field_expression ((field_expression (identifier) @type (identifier) @type) (identifier) @type)) ; x::Module.SubModule.T
+      (_) @type ; should tag anything as type (but does not work because the most specific match seems to have priority)
+    ])
 
 (unary_typed_expression
   (identifier) @type .)
