@@ -68,27 +68,89 @@
 ; Type annotations
 (parametrized_type_expression
   [
-    (identifier) @type
-    (field_expression (identifier) @type (identifier) @type)
-    (field_expression ((field_expression (identifier) @type (identifier) @type) (identifier) @type))
-    (_) @type
+    ((identifier) @type) ; match T
+    (field_expression
+      (identifier) @module
+      (identifier) @type
+    ) ; match MyModule.T
+    (field_expression
+      (field_expression
+        (identifier) @module
+        (identifier) @module)
+      (identifier) @type) ; match MyModule.MySubModule.T
+    (field_expression
+      (field_expression
+        (field_expression
+            (identifier) @module
+            (identifier) @module)
+        (identifier) @module)
+      (identifier) @type) ; match MyModule.MySubmodule.MySubSubModule.T)
   ]
   (curly_expression
-    [
-      (identifier) @type
-      (field_expression (identifier) @type (identifier) @type)
-      (field_expression ((field_expression (identifier) @type (identifier) @type) (identifier) @type))
-      (_) @type
-    ]))
+      [
+        ((identifier) @type) ; match T
+        (_) @type
+        (field_expression
+          (identifier) @module
+          (identifier) @type
+        ) ; match MyModule.T
+        (field_expression
+          (field_expression
+            (identifier) @module
+            (identifier) @module)
+          (identifier) @type) ; match MyModule.MySubModule.T
+        (field_expression
+          (field_expression
+            (field_expression
+                (identifier) @module
+                (identifier) @module)
+            (identifier) @module)
+          (identifier) @type) ; match MyModule.MySubmodule.MySubSubModule.T
+        (unary_expression
+          (operator) @operator
+          [
+            ((identifier) @type) ; match T
+            (field_expression
+              (identifier) @module
+              (identifier) @type
+            ) ; match MyModule.T
+            (field_expression
+              (field_expression
+                (identifier) @module
+                (identifier) @module)
+              (identifier) @type) ; match MyModule.MySubModule.T
+            (field_expression
+              (field_expression
+                (field_expression
+                    (identifier) @module
+                    (identifier) @module)
+                (identifier) @module)
+              (identifier) @type) ; match MyModule.MySubmodule.MySubSubModule.T
+          ] (#any-of? @operator "<:" ">:"))
+      ]
+    )) ; Zed - change to capture types prefixed with module names.
 
 (typed_expression
   (identifier)
-    [
-      (identifier) @type ; x::T, it tags T as type
-      (field_expression (identifier) @type (identifier) @type) ; x::Module.T, it tags Module and T as type
-      (field_expression ((field_expression (identifier) @type (identifier) @type) (identifier) @type)) ; x::Module.SubModule.T
-      (_) @type ; should tag anything as type (but does not work because the most specific match seems to have priority)
-    ])
+  [
+    ((identifier) @type) ; match T
+    (field_expression
+      (identifier) @module
+      (identifier) @type
+    ) ; match MyModule.T
+    (field_expression
+      (field_expression
+        (identifier) @module
+        (identifier) @module)
+      (identifier) @type) ; match MyModule.MySubModule.T
+    (field_expression
+      (field_expression
+          (field_expression
+            (identifier) @module
+            (identifier) @module)
+        (identifier) @module)
+      (identifier) @type) ; match MyModule.MySubmodule.MySubSubModule.T
+  ]) ; Zed - change to capture types prefixed with module names.
 
 (unary_typed_expression
   (identifier) @type .)
@@ -97,9 +159,45 @@
   (_) @type .)
 
 (binary_expression
-  (_) @type
+    [
+      ((identifier) @type) ; match T
+      (field_expression
+        (identifier) @module
+        (identifier) @type
+      ) ; match MyModule.T
+      (field_expression
+        (field_expression
+          (identifier) @module
+          (identifier) @module)
+        (identifier) @type) ; match MyModule.MySubModule.T
+      (field_expression
+        (field_expression
+            (field_expression
+              (identifier) @module
+              (identifier) @module)
+          (identifier) @module)
+        (identifier) @type) ; match MyModule.MySubmodule.MySubSubModule.T
+    ]
   (operator) @operator
-  (_) @type
+  [
+    ((identifier) @type) ; match T
+    (field_expression
+      (identifier) @module
+      (identifier) @type
+    ) ; match MyModule.T
+    (field_expression
+      (field_expression
+        (identifier) @module
+        (identifier) @module)
+      (identifier) @type) ; match MyModule.MySubModule.T
+    (field_expression
+      (field_expression
+          (field_expression
+            (identifier) @module
+            (identifier) @module)
+        (identifier) @module)
+      (identifier) @type) ; match MyModule.MySubmodule.MySubSubModule.T
+  ]
   (#any-of? @operator "<:" ">:"))
 
 ; Built-in types

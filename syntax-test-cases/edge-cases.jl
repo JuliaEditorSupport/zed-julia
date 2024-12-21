@@ -31,30 +31,34 @@ x = var .|> foo |> bar
 # Function definitions
 # (highlight the function name as @function.definition)
 function foo end
-function foo(x)
-    2x
-end
-function Base.foo(x)
-    2x
-end
+function foo(x) 2x end
+function Base.foo(x) 2x end
 
 # Types
 struct Bar
     a::T
-    b::Module.T # pass
-    c::Module.Submodule.T # pass
-    d::Module.Submodule.SubModule.SubSubModule.T # broken
-    e::Module.Submodule.T{Int} # pass
-    f::Module.Submodule.T{Module.Int} # pass
-    g::Module.Submodule.T{Module.SubModule.Int} # pass
-    h::Module.Submodule.T{Module.SubModule.SubSubModule.Int} # broken
+    b::MyModule.T # pass
+    c::MyModule.MySubModule.T # pass
+    d::MyModule.MySubModule.MySubSubModule.T # pass
+    d::MyModule.MySubModule.MySubSubModule.MySubSubSubModule.T # broken
+    e::MyModule.MySubModule.T{Int} # pass
+    f::MyModule.MySubModule.T{MyModule.Int} # pass
+    g::MyModule.MySubModule.T{MyModule.MySubModule.Int} # pass
+    h::MyModule.MySubModule.MySubSubModule.T{MyModule.MySubModule.MySubSubModule.Int} # pass
+    i::Array{<:MyModule.MySubModule.T} # pass
+    j::Array{>:MyModule.MySubModule.T} # pass
+    k::Tuple{MyModule.MySubModule.T,MyModule.MySubModule.U} # pass
 end
 
 function bar(w::T) end
-function bar(x::Module.T) nothing end
-function bar(y::Module.Submodule.T) nothing end
-function bar(z::Module.Submodule.T{Int}) nothing end
+function bar(x::MyModule.T, y::MyModule.T) nothing end
+function bar(y::MyModule.MySubmodule.T) nothing end
+function bar(z::MyModule.MySubmodule.T{MyModule.MySubModule.Int}) nothing end
+function bar(z::T) where {T<:MyModule.MySubModule.MySubSubModule.U} nothing end
+function bar(z::T) where {T>:MyModule.MySubModule.MySubSubModule.U} nothing end
 
+bar(z::MyModule.MySubmodule.T{MyModule.MySubModule.Int}) where {T<:MyModule.MySubModule.MySubSubModule.U} = nothing
+Base.bar(z::MyModule.MySubmodule.T{MyModule.MySubModule.Int}) where {T<:MyModule.MySubModule.MySubSubModule.U} = nothing
 
 # Short function definitions
 # (highlight the function name as @function.definition
@@ -111,5 +115,3 @@ Docstring with `markdown`.
 Docstring with `markdown`.
 """
 function Base.foo18() end
-
-module A end
