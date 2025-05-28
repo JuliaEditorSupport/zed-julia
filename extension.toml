@@ -1,14 +1,14 @@
 id = "julia"
 name = "Julia"
 description = "Julia support."
-version = "0.1.4"
+version = "0.1.5"
 schema_version = 1
 authors = ["Paul Berg <paul@plutojl.org>"]
 repository = "https://github.com/JuliaEditorSupport/zed-julia"
 
 [grammars.julia]
 repository = "https://github.com/tree-sitter/tree-sitter-julia"
-commit = "e01c928d11375513138a175a68485c4d53e55ea9"
+commit = "18b739c1563c83fc816170a4241adfa4b69e5c47"
 
 [language_servers.julia]
 languages = ["Julia"]
