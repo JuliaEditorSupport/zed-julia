@@ -2,16 +2,16 @@
   "using" @context
   [
    (selected_import (_) @name ":" @context)
-   (( [(identifier) (scoped_identifier) (import_path)] @name  "," @context)*
-      [(identifier) (scoped_identifier) (import_path)] @name)
+   (( [(identifier) (import_path)] @name  "," @context)*
+      [(identifier) (import_path)] @name)
   ]) @item
 
 (import_statement
   "import" @context
   [
    (selected_import (_) @name ":" @context)
-   (( [(identifier) (scoped_identifier) (import_path)] @name  "," @context)*
-      [(identifier) (scoped_identifier) (import_path)] @name)
+   (( [(identifier) (import_path)] @name  "," @context)*
+      [(identifier) (import_path)] @name)
   ]) @item
 
 (module_definition
