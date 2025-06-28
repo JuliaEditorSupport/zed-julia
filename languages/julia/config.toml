@@ -8,22 +8,12 @@ brackets = [
     { start = "{", end = "}", close = true, newline = true },
     { start = "[", end = "]", close = true, newline = true },
     { start = "(", end = ")", close = true, newline = true },
-    { start = "\"", end = "\"", close = true, newline = false, not_in = [
-        "comment",
-        "string",
-    ] },
-    { start = "'", end = "'", close = true, newline = false, not_in = [
-        "comment",
-        "string",
-    ] },
-    { start = "`", end = "`", close = true, newline = false, not_in = [
-        "comment",
-        "string",
-    ] },
-    { start = "#=", end = "=#", close = true, newline = false, not_in = [
-        "comment",
-        "string",
-    ] },
+    { start = "\"\"\"", end = "\n\"\"\"", close = true, newline = true },
+    { start = "```", end = "\n```", close = true, newline = true },
+    { start = "\"", end = "\"", close = true, newline = false, not_in = ["comment", "string"] },
+    { start = "'", end = "'", close = true, newline = false, not_in = ["comment", "string"] },
+    { start = "`", end = "`", close = true, newline = false, not_in = ["comment", "string"] },
+    { start = "#=", end = "=#", close = true, newline = false, not_in = ["comment", "string"] },
 ]
 collapsed_placeholder = "# ..."
 tab_size = 4
