@@ -48,6 +48,13 @@
   ])
   (#set! injection.language "markdown"))
 
+; struct field docstrings:
+((struct_definition
+  (string_literal) @injection.content
+  .
+  [(identifier) (typed_expression)])
+  (#set! injection.language "markdown"))
+
 ; HTML Language Injection
 ((prefixed_string_literal
   prefix: (identifier) @_prefix
