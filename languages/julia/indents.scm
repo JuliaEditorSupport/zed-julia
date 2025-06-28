@@ -5,7 +5,8 @@
     "end" @end)
   (function_definition
     "end" @end)
-  (compound_statement)
+  (compound_statement
+    "end" @end)
   (if_statement
     "end" @end)
   (try_statement
