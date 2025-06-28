@@ -415,6 +415,12 @@
       (identifier))
   ])
 
+; (4) struct field docstrings:
+(struct_definition
+  (string_literal) @comment.doc
+  .
+  [(identifier) (typed_expression)])
+
 [
   (line_comment)
   (block_comment)
