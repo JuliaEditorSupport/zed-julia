@@ -78,6 +78,27 @@ This _should_ have `markdown` injected!
 """
 struct A end
 
+struct FieldDocstring1
+    """
+    This _should_ have `markdown` injected!
+    """
+    x
+end
+
+struct FieldDocstring2
+    """
+    This _should_ have `markdown` injected!
+    """
+    x::Int
+end
+
+struct FieldDocstring3{T}
+    """
+    This _should_ have `markdown` injected!
+    """
+    x::T
+end
+
 # We don't highlight single nor triple quoted strings in macro calls:
 # Example 1
 @info """
