@@ -48,8 +48,9 @@
 (_ "{" "}" @end) @indent
 (_ "(" ")" @end) @indent
 
-; `@start.xxx` marks where these clauses start for `valid_after` matching in config.toml
-(else_clause "else" @start.else) @outdent
-(elseif_clause "elseif" @start.elseif) @outdent
-(catch_clause "catch" @start.catch) @outdent
-(finally_clause "finally" @start.finally) @outdent
+[
+  (else_clause)
+  (elseif_clause)
+  (catch_clause)
+  (finally_clause)
+] @outdent
