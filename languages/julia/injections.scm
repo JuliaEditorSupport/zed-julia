@@ -50,7 +50,7 @@
 
 ; struct field docstrings:
 ((struct_definition
-  (string_literal) @content
+  (string_literal) @injection.content
   .
   [(identifier) (typed_expression)])
   (#set! injection.language "markdown"))
