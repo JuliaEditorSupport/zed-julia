@@ -6,7 +6,7 @@
     .
     [(string_literal) (prefixed_string_literal)] @content))
   (#eq? @_macro "@doc")
-  (#set! "language" "markdown"))
+  (#set! injection.language "markdown"))
 
 ; docstrings preceding documentable elements at the top of a source file:
 ((source_file
@@ -26,7 +26,7 @@
     (open_tuple
       (identifier))
   ])
-  (#set! "language" "markdown"))
+  (#set! injection.language "markdown"))
 
 ; docstrings preceding documentable elements at the top of a module:
 ((module_definition
@@ -46,40 +46,46 @@
     (open_tuple
       (identifier))
   ])
-  (#set! "language" "markdown"))
+  (#set! injection.language "markdown"))
 
 ; HTML Language Injection
 ((prefixed_string_literal
-  prefix: (identifier) @_prefix) @content
-  (#eq? @_prefix "html")
-  (#set! "language" "html"))
+  prefix: (identifier) @prefix
+  (content) @content)
+  (#eq? @prefix "html")
+  (#set! injection.language "html"))
 
 ; LaTeX Language Injection (LaTeXStrings.jl)
 ((prefixed_string_literal
-  prefix: (identifier) @_prefix) @content
-  (#eq? @_prefix "L")
-  (#set! "language" "latex"))
+  prefix: (identifier) @prefix
+  (content) @content)
+  (#eq? @prefix "L")
+  (#set! injection.language "latex"))
 
 ; Markdown Language Injection
 ((prefixed_string_literal
-  prefix: (identifier) @_prefix) @content
-  (#eq? @_prefix "md")
-  (#set! "language" "markdown"))
+  prefix: (identifier) @prefix
+  (content) @content)
+  (#eq? @prefix "md")
+  (#set! injection.language "markdown"))
 
 ; Python Language Injection (PyCall.jl)
 ((prefixed_string_literal
-  prefix: (identifier) @_prefix) @content
-  (#eq? @_prefix "py")
-  (#set! "language" "python"))
+  prefix: (identifier) @prefix
+  (content) @content)
+  (#eq? @prefix "py")
+  (#set! injection.language "python"))
 
 ; Regex Language Injection
 ((prefixed_string_literal
-  prefix: (identifier) @_prefix) @content
-  (#eq? @_prefix "r")
-  (#set! "language" "regex"))
+  prefix: (identifier) @prefix
+  (content) @content)
+  (#eq? @prefix "r")
+  (#set! injection.language "regex"))
 
 ; SQL Language Injection (SQLStrings.jl)
 ((prefixed_command_literal
-  prefix: (identifier) @_prefix) @content
-  (#eq? @_prefix "sql")
-  (#set! "language" "sql"))
+  prefix: (identifier) @prefix
+  (content) @content)
+  (#eq? @prefix "sql")
+  (#set! injection.language "sql"))
