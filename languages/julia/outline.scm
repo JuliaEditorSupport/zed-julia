@@ -87,3 +87,19 @@
     (_) @name
     (operator)
     (_))) @item
+
+; Test sets - show test organization in outline
+(macrocall_expression
+  (macro_identifier "@" (identifier) @_macro)
+  (#eq? @_macro "testset")) @name @item
+
+; ; Individual tests - show full @test expression
+; (macrocall_expression
+;   (macro_identifier "@" (identifier) @_macro)
+;   (#eq? @_macro "test")) @name @item
+
+; Include statements - useful for navigating file structure
+(call_expression
+  (identifier) @_call @context
+  (argument_list) @name
+  (#eq? @_call "include")) @item
