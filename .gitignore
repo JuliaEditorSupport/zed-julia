@@ -1,4 +1,6 @@
 .DS_Store
+.zed
 grammars
 *.wasm
 target
+.envrc
