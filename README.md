@@ -15,6 +15,33 @@ executing the ``zed: extensions`` command (click Zed->Extensions).
 The Julia Zed extension looks for your Julia binary in the standard locations.
 Make sure that the Julia binary is on your ``PATH``.
 
+### Configuring the Julia executable for tasks
+
+By default, Zed tasks (like running tests) use the `julia` command from your PATH.
+You can customize which Julia executable is used by setting the `julia` environment variable:
+
+1. **In your shell configuration** (`.bashrc`, `.zshrc`, etc.):
+   ```bash
+   export julia="/path/to/custom/julia"
+   ```
+
+2. **When launching Zed from the terminal**:
+   ```bash
+   julia="/path/to/custom/julia" zed .
+   ```
+
+3. **Using direnv** (automatically supported by Zed):
+   - Create a `.envrc` file in your project root with:
+     > .envrc
+     ```
+     JULIA_HOME="path/to/julia/directory"
+     PATH_add "$JULIA_HOME/bin"
+     export julia="$JULIA_HOME/bin/julia"
+     ```
+   - Run `direnv allow` to approve the file
+
+This allows you to use different Julia versions for different projects or to
+specify a Julia installation that's not on your PATH.
 
 ### Contributing
 
