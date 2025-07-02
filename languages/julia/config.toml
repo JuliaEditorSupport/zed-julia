@@ -17,3 +17,50 @@ brackets = [
 ]
 collapsed_placeholder = "# ..."
 tab_size = 4
+
+# Indentation Configuration
+# ========================
+# Zed uses BOTH regex patterns (`config.toml`) and Tree-sitter queries (`indents.scm`) for indentation.
+#
+# Why Both Are Needed:
+# Based on Zed's Python implementation (PR #29625, #33370), regex patterns were introduced because:
+# 1. Tree-sitter has upstream parsing inconsistencies (e.g., Python issue #33238 with comments)
+# 2. The previous `significant_indentation` approach was "unnecessarily complicated to maintain"
+# 3. Tree-sitter alone cannot provide immediate feedback while typing incomplete code
+# 4. Complex nested structures need context-aware outdenting that's simpler with regex
+#
+# For Julia, we face similar challenges. Consider this case:
+# ```julia
+# if x
+# elseif y
+#     elseif z| <- just finished typing `z`
+# end
+# ```
+# Here, Tree-sitter might not recognize the incomplete line as an `elseif_clause` yet,
+# so `@outdent` won't trigger. The regex pattern matches immediately and outdents.
+#
+# This dual approach is intentional - Tree-sitter provides structural understanding
+# for complete code, while regex patterns handle the interactive typing experience:
+#
+# 1. `increase_indent_pattern`: Regex that matches lines after which indentation should increase
+#    - Applied when you press Enter after these patterns
+#    - Also tracks which keyword started each block (for use with `decrease_indent_patterns`)
+#
+# 2. `decrease_indent_patterns`: Context-aware outdenting with `valid_after`
+#    - REQUIRES corresponding `@start.suffix` captures in `indents.scm` (e.g., `@start.if`, `@start.function`)
+#    - REQUIRES `valid_after` to be specified - won't work without it
+#    - Aligns the matched line with the most recent valid predecessor
+#    - Example: `else` with `valid_after=["if","elseif"]` aligns to the nearest `if`/`elseif`
+#
+# Note: `decrease_indent_patterns` without `valid_after` will NOT work - this is by design in Zed.
+# It needs to know which block to align with, not just "decrease by one level".
+
+increase_indent_pattern = "^\\s*(function|if|elseif|else|for|while|begin|let|do|try|catch|finally|struct|mutable\\s+struct|quote|macro|module|baremodule|abstract\\s+type|primitive\\s+type)\\b.*$"
+
+decrease_indent_patterns = [
+    { pattern = "^\\s*elseif\\b.*", valid_after = ["if", "elseif"] },
+    { pattern = "^\\s*else\\b.*", valid_after = ["if", "elseif", "try", "catch"] },
+    { pattern = "^\\s*catch\\b.*", valid_after = ["try"] },
+    { pattern = "^\\s*finally\\b.*", valid_after = ["try", "catch"] },
+    { pattern = "^\\s*end\\b.*", valid_after = ["function", "if", "for", "while", "begin", "let", "do", "try", "struct", "macro", "quote"] }
+]

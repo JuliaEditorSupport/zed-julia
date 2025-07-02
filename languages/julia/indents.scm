@@ -1,25 +1,38 @@
+; `@start.xxx` marks where these clauses start for `valid_after` matching in config.toml
+
 [
   (struct_definition
+    "struct" @start.struct
     "end" @end)
   (macro_definition
+    "macro" @start.macro
     "end" @end)
   (function_definition
+    "function" @start.function
     "end" @end)
   (compound_statement
+    "begin" @start.begin
     "end" @end)
   (if_statement
+    "if" @start.if
     "end" @end)
   (try_statement
+    "try" @start.try
     "end" @end)
   (for_statement
+    "for" @start.for
     "end" @end)
   (while_statement
+    "while" @start.while
     "end" @end)
   (let_statement
+    "let" @start.let
     "end" @end)
   (quote_statement
+    "quote" @start.quote
     "end" @end)
   (do_clause
+    "do" @start.do
     "end" @end)
   (assignment)
   (for_binding)
