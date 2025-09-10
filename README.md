@@ -71,7 +71,6 @@ You can change the foreground color and text attributes of syntax tokens in your
   "experimental.theme_overrides": {
     "syntax": {
       "comment.doc": {
-        "color": "#808080",
         "font_style": "italic"
       },
       "function.definition": {
@@ -82,7 +81,6 @@ You can change the foreground color and text attributes of syntax tokens in your
   }
 }
 ```
-Note: the "color" field is mandatory even if you just want to change the "font_style" (the example in Zed's docs does not work).
 
 See [Syntax Highlighting and Themes](https://zed.dev/docs/configuring-languages#syntax-highlighting-and-themes) and [Tree-sitter Queries](https://zed.dev/docs/extensions/languages#tree-sitter-queries) for further details.
 
