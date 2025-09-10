@@ -6,7 +6,7 @@
     .
     [(string_literal) (prefixed_string_literal)] @injection.content))
   (#eq? @_macro "@doc")
-  (#set! injection.language "markdown"))
+  (#set! injection.language "markdown-inline"))
 
 ; docstrings preceding documentable elements at the top of a source file:
 ((source_file
@@ -26,7 +26,7 @@
     (open_tuple
       (identifier))
   ])
-  (#set! injection.language "markdown"))
+  (#set! injection.language "markdown-inline"))
 
 ; docstrings preceding documentable elements at the top of a module:
 ((module_definition
@@ -46,14 +46,14 @@
     (open_tuple
       (identifier))
   ])
-  (#set! injection.language "markdown"))
+  (#set! injection.language "markdown-inline"))
 
 ; struct field docstrings:
 ((struct_definition
   (string_literal) @injection.content
   .
   [(identifier) (typed_expression)])
-  (#set! injection.language "markdown"))
+  (#set! injection.language "markdown-inline"))
 
 ; HTML Language Injection
 ((prefixed_string_literal
