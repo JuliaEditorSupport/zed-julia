@@ -3,8 +3,17 @@
 This extension adds support for the [Julia](https://julialang.org/) language in
 the [zed](https://zed.dev) editor.
 
+### Quick links
+
+* [Contributing](./CONTRIBUTING.md)
+* [Installing Julia / Zed / Zed Julia extension](#installing-julia--zed--zed-julia-extension)
+* [Configuring the Julia executable for tasks](#configuring-the-julia-executable-for-tasks)
+* [Running code in the REPL](#running-code-in-the-repl)
+* [Using Zed in the REPL](#using-zed-in-the-repl)
+* [Customizing syntax highlighting](#customizing-syntax-highlighting)
 
 ### Installing Julia / Zed / Zed Julia extension
+
 1. Install Julia for your platform: https://julialang.org/downloads/
 2. Install Zed for your platform: https://zed.dev/download
 3. Start Zed.
@@ -43,10 +52,81 @@ You can customize which Julia executable is used by setting the `julia` environm
 This allows you to use different Julia versions for different projects or to
 specify a Julia installation that's not on your PATH.
 
-### Contributing
+### Running code in the REPL
 
-See [this document](./CONTRIBUTING.md).
+This section describes how to select Julia code in the editor and run it in Zed's integrated
+terminal. This is more of a workaround than a full integration. Currently, there is no
+_inline code execution_ as in VSCode. On the other hand, the Language Server is not required
+to make this work.
 
+1.  Open a .jl file in the editor.
+
+2.  From the Command Palette, run `open in terminal`. This opens a new terminal in the
+    worktree root (where the Project.toml lives). You can also right-click in the editor and
+    use the context menu or press ``ctrl-shift-` `` as defined in the json example below.
+
+3.  In the terminal, start the REPL with `julia --project`.
+
+4.  Now it's time to select some code in the editor, copy it to the clipboard, paste it into
+    the terminal, execute it, and go back to the editor. To make that less tedious, add one
+    or more of the following key bindings. Change the `ctrl-shift-f10/11/12` combinations
+    to your liking.
+
+    Note: interacting with the terminal requires to send keystrokes. In the examples,
+    `cmd-v` is used to paste code. Please adjust this binding for your operating system.
+
+    ```jsonc
+    // Zed key map file, usually ~/.config/zed/keymap.json
+    [
+      {
+        // Set the focus back to the editor without hiding the terminal.
+        // This is an auxiliary binding used by other bindings.
+        "context": "Terminal",
+        "bindings": { "ctrl-shift-`": "terminal_panel::ToggleFocus" }
+      },
+      {
+        "context": "Editor && mode == full",
+        "bindings": {
+          // Open a new terminal and change to the worktree root directory.
+          "ctrl-shift-`": "workspace::OpenInTerminal",
+
+          // Execute the whole line the cursor is on and move the cursor to the next line.
+          // Invoke this binding repeately to run line by line.
+          "ctrl-shift-f10": [
+            "action::Sequence",
+            [
+              "editor::SelectLine",
+              "editor::Copy",
+              "editor::MoveRight",
+              ["workspace::SendKeystrokes", "ctrl-` cmd-v ctrl-shift-`"]
+            ]
+          ],
+
+          // Execute the enclosing top level block e.g., a function definition.
+          // Note the additional keystroke "enter" to actually execute the code.
+          "ctrl-shift-f11": [
+            "action::Sequence",
+            [
+              "editor::SelectEnclosingSymbol",
+              "editor::CopyAndTrim",
+              ["workspace::SendKeystrokes", "ctrl-` cmd-v enter ctrl-shift-`"]
+            ]
+          ],
+
+          // Execute the paragraph (a block surrounded by blank lines).
+          "ctrl-shift-f12": [
+            "action::Sequence",
+            [
+              "editor::MoveToStartOfParagraph",
+              "editor::SelectToEndOfParagraph",
+              "editor::Copy",
+              ["workspace::SendKeystrokes", "ctrl-` cmd-v ctrl-shift-`"]
+            ]
+          ]
+        }
+      }
+    ]
+    ```
 
 ### Using Zed in the REPL
 
