@@ -204,6 +204,17 @@
     "end"
   ] @keyword.import)
 
+; Zed - added: Module name as type
+(module_definition
+  ["module" "baremodule"]
+  (identifier) @type)
+
+; Zed - added: @goto/@label target labels
+((macrocall_expression
+  (macro_identifier "@" @function.macro (identifier) @_name @function.macro)
+  (macro_argument_list (identifier) @label))
+  (#any-of? @_name "goto" "label"))
+
 (export_statement
   "export" @keyword.import)
 
