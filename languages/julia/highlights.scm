@@ -43,11 +43,6 @@
   (identifier) @function.call
   (#any-of? @_pipe "|>" ".|>"))
 
-; Macros
-(macro_identifier
-  "@" @function.macro
-  (_) @function.macro)
-
 (macro_definition
   (signature
     (call_expression
@@ -99,6 +94,16 @@
   (assignment
     .
     (identifier) @constant))
+    
+; Zed - moved after builtins to ensure macro highlights take precedence
+(macro_identifier
+  "@" @function.macro
+  (_) @function.macro)
+
+; Zed - added: Assignment left-hand side should be variable, not type.builtin
+(assignment
+  .
+  (identifier) @variable)
 
 ; Keywords
 [
@@ -209,6 +214,17 @@
     "baremodule"
     "end"
   ] @keyword.import)
+
+; Zed - added: Module name as type
+(module_definition
+  ["module" "baremodule"]
+  (identifier) @type)
+
+; Zed - added: @goto/@label target labels
+((macrocall_expression
+  (macro_identifier "@" @function.macro (identifier) @_name @function.macro)
+  (macro_argument_list (identifier) @label))
+  (#any-of? @_name "goto" "label"))
 
 (export_statement
   "export" @keyword.import)
