@@ -52,10 +52,10 @@ impl zed::Extension for JuliaExtension {
 
     fn language_server_workspace_configuration(
         &mut self,
-        _language_server_id: &LanguageServerId,
+        server_id: &LanguageServerId,
         worktree: &zed::Worktree,
     ) -> Result<Option<zed::serde_json::Value>> {
-        let settings = LspSettings::for_worktree("julia", worktree)
+        let settings = LspSettings::for_worktree(server_id.as_ref(), worktree)
             .ok()
             .and_then(|lsp_settings| lsp_settings.settings)
             .unwrap_or_default();
