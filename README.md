@@ -10,6 +10,7 @@ the [zed](https://zed.dev) editor.
 * [Configuring the Julia executable for tasks](#configuring-the-julia-executable-for-tasks)
 * [Running code in the REPL](#running-code-in-the-repl)
 * [Using Zed in the REPL](#using-zed-in-the-repl)
+* [Changing settings of the LanguageServer](#changing-settings-of-the-languageserver)
 * [Customizing syntax highlighting](#customizing-syntax-highlighting)
 
 ### Installing Julia / Zed / Zed Julia extension
@@ -141,6 +142,25 @@ end
 ```
 
 Set the environment variable EDITOR (or VISUAL or JULIA_EDITOR, whatever you use) to `zed --wait`. Then, using `InteractiveUtils.edit` etc. will open the document in Zed.
+
+### Changing settings of the LanguageServer
+
+The Julia LS can be customized by adding a section to your `~/.config/zed/settings.json`. Example: don't show diagnostic messages of type "missing references" with:
+
+```json
+{
+  "lsp": {
+    "julia": {
+      "settings": {
+        "julia.lint.missingrefs": "none"
+      }
+    }
+  }
+}
+```
+
+We will add autocompletions for the available settings later (there is some groundwork missing in Zed). For now, have a look at the `lint` keys in 
+[julia-vscode](https://github.com/julia-vscode/julia-vscode/blob/8f8d879dc62dee1658115c40dc4e156e9c0cffe4/package.json#L874).
 
 ### Customizing syntax highlighting
 
