@@ -1,5 +1,5 @@
 use zed::{CodeLabel, LanguageServerId};
-use zed_extension_api::{self as zed, Result};
+use zed_extension_api::{self as zed, settings::LspSettings, Result};
 
 struct JuliaExtension;
 
@@ -48,6 +48,18 @@ impl zed::Extension for JuliaExtension {
             ],
             env: Default::default(),
         })
+    }
+
+    fn language_server_workspace_configuration(
+        &mut self,
+        server_id: &LanguageServerId,
+        worktree: &zed::Worktree,
+    ) -> Result<Option<zed::serde_json::Value>> {
+        let settings = LspSettings::for_worktree(server_id.as_ref(), worktree)
+            .ok()
+            .and_then(|lsp_settings| lsp_settings.settings)
+            .unwrap_or_default();
+        Ok(Some(settings))
     }
 
     fn label_for_completion(
