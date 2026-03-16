@@ -116,6 +116,24 @@
           ]
           (argument_list)? @context)
         _+ @context)
+      (where_expression
+        (call_expression
+          [
+            (identifier) @name
+            (field_expression _+ @context (identifier) @name .)
+          ]
+          (argument_list)? @context)
+        _+ @context)
+      (where_expression
+        (typed_expression
+          (call_expression
+            [
+              (identifier) @name
+              (field_expression _+ @context (identifier) @name .)
+            ]
+            (argument_list)? @context)
+          _+ @context)
+        _+ @context)
     ]
   )) @item
 

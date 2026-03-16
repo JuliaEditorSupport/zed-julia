@@ -48,6 +48,8 @@
     [
       (call_expression . (identifier) @function.macro)
       (typed_expression . (call_expression . (identifier) @function.macro))
+      (where_expression . (call_expression . (identifier) @function.macro))
+      (where_expression . (typed_expression . (call_expression . (identifier) @function.macro)))
     ]))
 
 ; Built-in functions
