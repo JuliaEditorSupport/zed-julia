@@ -45,9 +45,10 @@
 
 (macro_definition
   (signature
-    (call_expression
-      .
-      (identifier) @function.macro)))
+    [
+      (call_expression . (identifier) @function.macro)
+      (typed_expression . (call_expression . (identifier) @function.macro))
+    ]))
 
 ; Built-in functions
 ; print.("\"", filter(name -> getglobal(Core, name) isa Core.Builtin, names(Core)), "\" ")
@@ -321,6 +322,12 @@
       (identifier) @function.definition
       (call_expression (identifier) @function.definition)
       (call_expression (field_expression (identifier) @function.definition .))
+      (typed_expression . (call_expression (identifier) @function.definition))
+      (typed_expression . (call_expression (field_expression (identifier) @function.definition .)))
+      (where_expression . (call_expression (identifier) @function.definition))
+      (where_expression . (call_expression (field_expression (identifier) @function.definition .)))
+      (where_expression . (typed_expression . (call_expression (identifier) @function.definition)))
+      (where_expression . (typed_expression . (call_expression (field_expression (identifier) @function.definition .))))
     ]))
 
 ; Zed - added: Short function definitions like `foo(x) = 2x`
