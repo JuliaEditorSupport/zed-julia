@@ -8,7 +8,7 @@ begin
     # this is a block, not an index
 end
 
-# ------------ 
+# ------------
 # Zed specials
 # ------------
 
@@ -33,6 +33,44 @@ x = var .|> foo |> bar
 function foo end
 function foo(x) 2x end
 function Base.foo(x) 2x end
+
+# Long function definitions with return types and where clauses
+# (highlight the function name as @function.definition)
+# (these should all show in the outline panel)
+function foo_plain(x)
+    return x + 1
+end
+
+function bar_typed(x)::String
+    return string(x)
+end
+
+function baz_typed(x::Int)::Int
+    return x * 2
+end
+
+function qux_typed(x::Int, y::Int)::Float64
+    return x / y
+end
+
+function quux_where(x::T) where T
+    return x + 1
+end
+
+function corge_both(x::T)::Int where T
+    return x * 2
+end
+
+# Macro definitions with return types and where clauses
+# (highlight the macro name as @function.macro)
+# (all should appear in outline)
+macro mymacro(ex)
+    return esc(ex)
+end
+
+macro typed_macro(ex)::Expr
+    return esc(ex)
+end
 
 # Short function definitions
 # (highlight the function name as @function.definition
