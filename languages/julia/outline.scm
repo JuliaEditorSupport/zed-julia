@@ -39,16 +39,45 @@
   "struct" @context
   (type_head) @name) @item
 
+; Match long function definitions like `function foo(x) ... end`.
+; Handle all four combinations: plain, with return type, with where clause, or both.
 (function_definition
   "function" @context
   (signature
-    (call_expression
-      [
-        (identifier) @name ; match foo()
-        (field_expression _+ @context (identifier) @name .) ; match Base.foo()
-      ]
-      (argument_list)? @context)
-    (_)* @context ; match the rest of the signature e.g., return_type and/or where_clause
+    [
+      (call_expression
+        [
+          (identifier) @name
+          (field_expression _+ @context (identifier) @name .)
+        ]
+        (argument_list)? @context)
+      (typed_expression
+        (call_expression
+          [
+            (identifier) @name
+            (field_expression _+ @context (identifier) @name .)
+          ]
+          (argument_list)? @context)
+        _+ @context)
+      (where_expression
+        (call_expression
+          [
+            (identifier) @name
+            (field_expression _+ @context (identifier) @name .)
+          ]
+          (argument_list)? @context)
+        _+ @context)
+      (where_expression
+        (typed_expression
+          (call_expression
+            [
+              (identifier) @name
+              (field_expression _+ @context (identifier) @name .)
+            ]
+            (argument_list)? @context)
+          _+ @context)
+        _+ @context)
+    ]
   )) @item
 
 ; Match short function definitions like foo(x) = 2x.
@@ -72,13 +101,22 @@
 (macro_definition
   "macro" @context
   (signature
-    (call_expression
-      [
-        (identifier) @name ; match foo()
-        (field_expression _+ @context (identifier) @name .) ; match Base.foo()
-      ]
-      (argument_list)? @context)
-    (_)* @context ; match the rest of the signature e.g., return_type
+    [
+      (call_expression
+        [
+          (identifier) @name
+          (field_expression _+ @context (identifier) @name .)
+        ]
+        (argument_list)? @context)
+      (typed_expression
+        (call_expression
+          [
+            (identifier) @name
+            (field_expression _+ @context (identifier) @name .)
+          ]
+          (argument_list)? @context)
+        _+ @context)
+    ]
   )) @item
 
 (const_statement
