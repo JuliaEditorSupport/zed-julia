@@ -45,38 +45,16 @@
   "function" @context
   (signature
     [
-      (call_expression
-        [
-          (identifier) @name
-          (field_expression _+ @context (identifier) @name .)
-        ]
-        (argument_list)? @context)
-      (typed_expression
-        (call_expression
-          [
-            (identifier) @name
-            (field_expression _+ @context (identifier) @name .)
-          ]
-          (argument_list)? @context)
-        _+ @context)
-      (where_expression
-        (call_expression
-          [
-            (identifier) @name
-            (field_expression _+ @context (identifier) @name .)
-          ]
-          (argument_list)? @context)
-        _+ @context)
-      (where_expression
-        (typed_expression
-          (call_expression
-            [
-              (identifier) @name
-              (field_expression _+ @context (identifier) @name .)
-            ]
-            (argument_list)? @context)
-          _+ @context)
-        _+ @context)
+      ; match `foo()` or `foo()::T` or `foo() where...` or `foo()::T where...`
+      (call_expression (identifier) @name (argument_list)? @context)
+      (typed_expression (call_expression (identifier) @name (argument_list)? @context) _+ @context)
+      (where_expression (call_expression (identifier) @name (argument_list)? @context) _+ @context)
+      (where_expression (typed_expression (call_expression (identifier) @name (argument_list)? @context) _+ @context) _+ @context)
+      ; match `Base.foo()` or `Base.foo()::T` or `Base.foo() where...` or `Base.foo()::T where...`
+      (call_expression (field_expression _+ @context (identifier) @name .) (argument_list)? @context)
+      (typed_expression (call_expression (field_expression _+ @context (identifier) @name .) (argument_list)? @context) _+ @context)
+      (where_expression (call_expression (field_expression _+ @context (identifier) @name .) (argument_list)? @context) _+ @context)
+      (where_expression (typed_expression (call_expression (field_expression _+ @context (identifier) @name .) (argument_list)? @context) _+ @context) _+ @context)
     ]
   )) @item
 
@@ -102,38 +80,16 @@
   "macro" @context
   (signature
     [
-      (call_expression
-        [
-          (identifier) @name
-          (field_expression _+ @context (identifier) @name .)
-        ]
-        (argument_list)? @context)
-      (typed_expression
-        (call_expression
-          [
-            (identifier) @name
-            (field_expression _+ @context (identifier) @name .)
-          ]
-          (argument_list)? @context)
-        _+ @context)
-      (where_expression
-        (call_expression
-          [
-            (identifier) @name
-            (field_expression _+ @context (identifier) @name .)
-          ]
-          (argument_list)? @context)
-        _+ @context)
-      (where_expression
-        (typed_expression
-          (call_expression
-            [
-              (identifier) @name
-              (field_expression _+ @context (identifier) @name .)
-            ]
-            (argument_list)? @context)
-          _+ @context)
-        _+ @context)
+      ; match `foo()` or `foo()::T` or `foo() where...` or `foo()::T where...`
+      (call_expression (identifier) @name (argument_list)? @context)
+      (typed_expression (call_expression (identifier) @name (argument_list)? @context) _+ @context)
+      (where_expression (call_expression (identifier) @name (argument_list)? @context) _+ @context)
+      (where_expression (typed_expression (call_expression (identifier) @name (argument_list)? @context) _+ @context) _+ @context)
+      ; match `Base.foo()` or `Base.foo()::T` or `Base.foo() where...` or `Base.foo()::T where...`
+      (call_expression (field_expression _+ @context (identifier) @name .) (argument_list)? @context)
+      (typed_expression (call_expression (field_expression _+ @context (identifier) @name .) (argument_list)? @context) _+ @context)
+      (where_expression (call_expression (field_expression _+ @context (identifier) @name .) (argument_list)? @context) _+ @context)
+      (where_expression (typed_expression (call_expression (field_expression _+ @context (identifier) @name .) (argument_list)? @context) _+ @context) _+ @context)
     ]
   )) @item
 
