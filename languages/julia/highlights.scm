@@ -43,12 +43,6 @@
   (identifier) @function.call
   (#any-of? @_pipe "|>" ".|>"))
 
-(macro_definition
-  (signature
-    (call_expression
-      .
-      (identifier) @function.macro)))
-
 ; Built-in functions
 ; print.("\"", filter(name -> getglobal(Core, name) isa Core.Builtin, names(Core)), "\" ")
 ((identifier) @function.builtin
@@ -94,7 +88,7 @@
   (assignment
     .
     (identifier) @constant))
-    
+
 ; Zed - moved after builtins to ensure macro highlights take precedence
 (macro_identifier
   "@" @function.macro
@@ -319,24 +313,44 @@
     .
     [
       (identifier) @function.definition
+      ; match `foo()` or `foo()::T` or `foo() where...` or `foo()::T where...`
       (call_expression (identifier) @function.definition)
+      (typed_expression . (call_expression (identifier) @function.definition))
+      (where_expression . (call_expression (identifier) @function.definition))
+      (where_expression . (typed_expression . (call_expression (identifier) @function.definition)))
+      ; match `Base.foo()` or `Base.foo()::T` or `Base.foo() where...` or `Base.foo()::T where...`
       (call_expression (field_expression (identifier) @function.definition .))
+      (typed_expression . (call_expression (field_expression (identifier) @function.definition .)))
+      (where_expression . (call_expression (field_expression (identifier) @function.definition .)))
+      (where_expression . (typed_expression . (call_expression (field_expression (identifier) @function.definition .))))
     ]))
 
 ; Zed - added: Short function definitions like `foo(x) = 2x`
 (assignment
   .
   [
+    ; match `foo()` or `foo()::T` or `foo() where...` or `foo()::T where...`
     (call_expression (identifier) @function.definition)
     (typed_expression . (call_expression (identifier) @function.definition))
     (where_expression . (call_expression (identifier) @function.definition))
     (where_expression . (typed_expression . (call_expression (identifier) @function.definition)))
+    ; match `Base.foo()` or `Base.foo()::T` or `Base.foo() where...` or `Base.foo()::T where...`
     (call_expression (field_expression (identifier) @function.definition .))
     (typed_expression . (call_expression (field_expression (identifier) @function.definition .)))
     (where_expression . (call_expression (field_expression (identifier) @function.definition .)))
     (where_expression . (typed_expression . (call_expression (field_expression (identifier) @function.definition .))))
   ]
   (operator) @keyword.function)
+
+; Zed - added: Macro definition name highlighting
+(macro_definition
+  (signature
+    [
+      (call_expression . (identifier) @function.macro)
+      (typed_expression . (call_expression . (identifier) @function.macro))
+      (where_expression . (call_expression . (identifier) @function.macro))
+      (where_expression . (typed_expression . (call_expression . (identifier) @function.macro)))
+    ]))
 
 ; Keyword operators
 ((operator) @keyword.operator

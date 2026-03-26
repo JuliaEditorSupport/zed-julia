@@ -39,16 +39,23 @@
   "struct" @context
   (type_head) @name) @item
 
+; Match long function definitions like `function foo(x) ... end`.
+; Handle all four combinations: plain, with return type, with where clause, or both.
 (function_definition
   "function" @context
   (signature
-    (call_expression
-      [
-        (identifier) @name ; match foo()
-        (field_expression _+ @context (identifier) @name .) ; match Base.foo()
-      ]
-      (argument_list)? @context)
-    (_)* @context ; match the rest of the signature e.g., return_type and/or where_clause
+    [
+      ; match `foo()` or `foo()::T` or `foo() where...` or `foo()::T where...`
+      (call_expression (identifier) @name (argument_list)? @context)
+      (typed_expression (call_expression (identifier) @name (argument_list)? @context) _+ @context)
+      (where_expression (call_expression (identifier) @name (argument_list)? @context) _+ @context)
+      (where_expression (typed_expression (call_expression (identifier) @name (argument_list)? @context) _+ @context) _+ @context)
+      ; match `Base.foo()` or `Base.foo()::T` or `Base.foo() where...` or `Base.foo()::T where...`
+      (call_expression (field_expression _+ @context (identifier) @name .) (argument_list)? @context)
+      (typed_expression (call_expression (field_expression _+ @context (identifier) @name .) (argument_list)? @context) _+ @context)
+      (where_expression (call_expression (field_expression _+ @context (identifier) @name .) (argument_list)? @context) _+ @context)
+      (where_expression (typed_expression (call_expression (field_expression _+ @context (identifier) @name .) (argument_list)? @context) _+ @context) _+ @context)
+    ]
   )) @item
 
 ; Match short function definitions like foo(x) = 2x.
@@ -72,13 +79,18 @@
 (macro_definition
   "macro" @context
   (signature
-    (call_expression
-      [
-        (identifier) @name ; match foo()
-        (field_expression _+ @context (identifier) @name .) ; match Base.foo()
-      ]
-      (argument_list)? @context)
-    (_)* @context ; match the rest of the signature e.g., return_type
+    [
+      ; match `foo()` or `foo()::T` or `foo() where...` or `foo()::T where...`
+      (call_expression (identifier) @name (argument_list)? @context)
+      (typed_expression (call_expression (identifier) @name (argument_list)? @context) _+ @context)
+      (where_expression (call_expression (identifier) @name (argument_list)? @context) _+ @context)
+      (where_expression (typed_expression (call_expression (identifier) @name (argument_list)? @context) _+ @context) _+ @context)
+      ; match `Base.foo()` or `Base.foo()::T` or `Base.foo() where...` or `Base.foo()::T where...`
+      (call_expression (field_expression _+ @context (identifier) @name .) (argument_list)? @context)
+      (typed_expression (call_expression (field_expression _+ @context (identifier) @name .) (argument_list)? @context) _+ @context)
+      (where_expression (call_expression (field_expression _+ @context (identifier) @name .) (argument_list)? @context) _+ @context)
+      (where_expression (typed_expression (call_expression (field_expression _+ @context (identifier) @name .) (argument_list)? @context) _+ @context) _+ @context)
+    ]
   )) @item
 
 (const_statement
