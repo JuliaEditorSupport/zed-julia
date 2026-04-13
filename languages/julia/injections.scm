@@ -30,29 +30,31 @@
 
 ; docstrings preceding documentable elements at the top of a module:
 ((module_definition
-  (string_literal) @injection.content
-  .
-  [
-    (assignment)
-    (const_statement)
-    (global_statement)
-    (abstract_definition)
-    (function_definition)
-    (macro_definition)
-    (module_definition)
-    (struct_definition)
-    (macrocall_expression) ; Covers things like @kwdef struct X ... end
-    (identifier)
-    (open_tuple
-      (identifier))
-  ])
+  (block
+    (string_literal) @injection.content
+    .
+    [
+      (assignment)
+      (const_statement)
+      (global_statement)
+      (abstract_definition)
+      (function_definition)
+      (macro_definition)
+      (module_definition)
+      (struct_definition)
+      (macrocall_expression) ; Covers things like @kwdef struct X ... end
+      (identifier)
+      (open_tuple
+        (identifier))
+    ]))
   (#set! injection.language "markdown-inline"))
 
 ; struct field docstrings:
 ((struct_definition
-  (string_literal) @injection.content
-  .
-  [(identifier) (typed_expression)])
+  (block
+    (string_literal) @injection.content
+    .
+    [(identifier) (typed_expression)]))
   (#set! injection.language "markdown-inline"))
 
 ; HTML Language Injection

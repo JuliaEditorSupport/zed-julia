@@ -168,17 +168,19 @@ You can change the foreground color and text attributes of syntax tokens in your
 
 ```json
 {
-  "experimental.theme_overrides": {
-    "syntax": {
-      "comment.doc": {
-        "font_style": "italic"
+  "theme_overrides": {
+    "One Dark": {
+      "syntax": {
+        "comment.doc": {
+          "font_style": "italic",
+        },
+        "function.definition": {
+          "color": "#0000AA",
+          "font_weight": 700,
+        },
       },
-      "function.definition": {
-        "color": "#0000AA",
-        "font_weight": 700
-      }
-    }
-  }
+    },
+  },
 }
 ```
 
@@ -191,6 +193,7 @@ Syntax tokens are called *captures* in tree-sitter jargon. The following table l
 | boolean | yes |
 | comment | yes | line or block comment |
 | comment.doc | yes | docstring |
+| constant | yes | 
 | constant.builtin | no, falls back to constant | core julia built-in |
 | function.builtin | no, falls back to function | core julia built-in |
 | function.call | no, falls back to function | name of the called function |
@@ -205,6 +208,8 @@ Syntax tokens are called *captures* in tree-sitter jargon. The following table l
 | keyword.operator | no, falls back to keyword | `in`, `isa`, `where` |
 | keyword.repeat | no, falls back to keyword | `for`, `while` |
 | keyword.return | no, falls back to keyword | `return` |
+| keyword.type | no, falls back to keyword | struct or type definition |
+| label | yes | label name for `@label`, `@goto` |
 | number | yes |
 | number.float | no, falls back to number |
 | operator | yes |
