@@ -235,7 +235,7 @@
 ; Zed - added: Module name as type
 (module_definition
   ["module" "baremodule"]
-  (identifier) @type)
+  name: (identifier) @type)
 
 ; Zed - added: @goto/@label target labels
 ((macrocall_expression
@@ -333,7 +333,7 @@
 
 ; Zed - added: Match the dot in the @. macro
 (macro_identifier
-  "@"
+  "@" @function.macro
   (operator "." @function.macro))
 
 ; Zed - added: Function definitions
@@ -455,28 +455,30 @@
 
 ; (3) docstrings preceding documentable elements at the top of a module:
 (module_definition
-  (string_literal) @comment.doc
-  .
-  [
-    (assignment)
-    (const_statement)
-    (global_statement)
-    (abstract_definition)
-    (function_definition)
-    (macro_definition)
-    (module_definition)
-    (struct_definition)
-    (macrocall_expression) ; Covers things like @kwdef struct X ... end
-    (identifier)
-    (open_tuple
-      (identifier))
-  ])
+  (block
+    (string_literal) @comment.doc
+    .
+    [
+      (assignment)
+      (const_statement)
+      (global_statement)
+      (abstract_definition)
+      (function_definition)
+      (macro_definition)
+      (module_definition)
+      (struct_definition)
+      (macrocall_expression) ; Covers things like @kwdef struct X ... end
+      (identifier)
+      (open_tuple
+        (identifier))
+    ]))
 
 ; (4) struct field docstrings:
 (struct_definition
-  (string_literal) @comment.doc
-  .
-  [(identifier) (typed_expression)])
+  (block
+    (string_literal) @comment.doc
+    .
+    [(identifier) (typed_expression)]))
 
 [
   (line_comment)
