@@ -208,7 +208,7 @@ Syntax tokens are called *captures* in tree-sitter jargon. The following table l
 | keyword.operator | no, falls back to keyword | `in`, `isa`, `where` |
 | keyword.repeat | no, falls back to keyword | `for`, `while` |
 | keyword.return | no, falls back to keyword | `return` |
-| keyword.type | no, falls back to keyword | primitive type definition |
+| keyword.type | no, falls back to keyword | struct or type definition |
 | label | yes | label name for `@label`, `@goto` |
 | number | yes |
 | number.float | no, falls back to number |
