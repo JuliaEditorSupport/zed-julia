@@ -266,7 +266,7 @@
     "mutable"
     "struct"
     "end"
-  ] @keyword) ; Zed - changed `@keyword.type` to `@keyword`
+  ] @keyword.type)
 
 (abstract_definition
   [
@@ -423,7 +423,7 @@
 (prefixed_command_literal
   prefix: (identifier) @function.macro) @string.special
 
-; Zed - modified queries for docstrings (3 queries):
+; Zed - modified queries for docstrings (4 queries):
 
 ; (1) doc macro docstrings:
 ; @doc "..." x
