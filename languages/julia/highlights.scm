@@ -36,7 +36,6 @@
   (field_expression
     (identifier) @function.call .))
 
-; Zed - added: Function calls in pipes
 (binary_expression
   (_)
   (operator) @_pipe
@@ -47,17 +46,21 @@
 ; print.("\"", filter(name -> getglobal(Core, name) isa Core.Builtin, names(Core)), "\" ")
 ((identifier) @function.builtin
   (#any-of? @function.builtin
-    "applicable" "fieldtype" "getfield" "getglobal" "invoke" "isa" "isdefined" "isdefinedglobal" "modifyfield!" "modifyglobal!" "nfields" "replacefield!" "replaceglobal!" "setfield!" "setfieldonce!" "setglobal!" "setglobalonce!" "swapfield!" "swapglobal!" "throw" "tuple" "typeassert" "typeof"))
+    "applicable" "fieldtype" "getfield" "getglobal" "invoke" "isa" "isdefined" "isdefinedglobal"
+    "modifyfield!" "modifyglobal!" "nfields" "replacefield!" "replaceglobal!" "setfield!"
+    "setfieldonce!" "setglobal!" "setglobalonce!" "swapfield!" "swapglobal!" "throw" "tuple"
+    "typeassert" "typeof"))
 
 ; Type definitions
-(type_head (_) @type.definition)
+(type_head
+  (_) @type.definition)
 
 ; Type annotations
 (parametrized_type_expression
   [
-   (identifier) @type
-   (field_expression
-     (identifier) @type .)
+    (identifier) @type
+    (field_expression
+      (identifier) @type .)
   ]
   (curly_expression
     (_) @type))
@@ -69,7 +72,16 @@
   (identifier) @type .)
 
 (where_expression
-  (_) @type .)
+  [
+    (curly_expression
+      (_) @type)
+    (_) @type
+  ] .)
+
+(unary_expression
+  (operator) @operator
+  (_) @type
+  (#any-of? @operator "<:" ">:"))
 
 (binary_expression
   (_) @type
@@ -81,7 +93,18 @@
 ; print.("\"", filter(name -> typeof(Base.eval(Core, name)) in [DataType, UnionAll], names(Core)), "\" ")
 ((identifier) @type.builtin
   (#any-of? @type.builtin
-    "AbstractArray" "AbstractChar" "AbstractFloat" "AbstractString" "Any" "ArgumentError" "Array" "AssertionError" "AtomicMemory" "AtomicMemoryRef" "Bool" "BoundsError" "Char" "ConcurrencyViolationError" "Cvoid" "DataType" "DenseArray" "DivideError" "DomainError" "ErrorException" "Exception" "Expr" "FieldError" "Float16" "Float32" "Float64" "Function" "GenericMemory" "GenericMemoryRef" "GlobalRef" "IO" "InexactError" "InitError" "Int" "Int128" "Int16" "Int32" "Int64" "Int8" "Integer" "InterruptException" "LineNumberNode" "LoadError" "Memory" "MemoryRef" "Method" "MethodError" "Module" "NTuple" "NamedTuple" "Nothing" "Number" "OutOfMemoryError" "OverflowError" "Pair" "Ptr" "QuoteNode" "ReadOnlyMemoryError" "Real" "Ref" "SegmentationFault" "Signed" "StackOverflowError" "String" "Symbol" "Task" "Tuple" "Type" "TypeError" "TypeVar" "UInt" "UInt128" "UInt16" "UInt32" "UInt64" "UInt8" "UndefInitializer" "UndefKeywordError" "UndefRefError" "UndefVarError" "Union" "UnionAll" "Unsigned" "VecElement" "WeakRef"))
+    "AbstractArray" "AbstractChar" "AbstractFloat" "AbstractString" "Any" "ArgumentError" "Array"
+    "AssertionError" "AtomicMemory" "AtomicMemoryRef" "Bool" "BoundsError" "Char"
+    "ConcurrencyViolationError" "Cvoid" "DataType" "DenseArray" "DivideError" "DomainError"
+    "ErrorException" "Exception" "Expr" "FieldError" "Float16" "Float32" "Float64" "Function"
+    "GenericMemory" "GenericMemoryRef" "GlobalRef" "IO" "InexactError" "InitError" "Int" "Int128"
+    "Int16" "Int32" "Int64" "Int8" "Integer" "InterruptException" "LineNumberNode" "LoadError"
+    "Memory" "MemoryRef" "Method" "MethodError" "Module" "NTuple" "NamedTuple" "Nothing" "Number"
+    "OutOfMemoryError" "OverflowError" "Pair" "Ptr" "QuoteNode" "ReadOnlyMemoryError" "Real" "Ref"
+    "SegmentationFault" "Signed" "StackOverflowError" "String" "Symbol" "Task" "Tuple" "Type"
+    "TypeError" "TypeVar" "UInt" "UInt128" "UInt16" "UInt32" "UInt64" "UInt8" "UndefInitializer"
+    "UndefKeywordError" "UndefRefError" "UndefVarError" "Union" "UnionAll" "Unsigned" "VecElement"
+    "WeakRef"))
 
 ; Zed - added: const declarations
 (const_statement
@@ -92,7 +115,7 @@
 ; Zed - moved after builtins to ensure macro highlights take precedence
 (macro_identifier
   "@" @function.macro
-  (_) @function.macro)
+  (identifier) @function.macro)
 
 ; Zed - added: Assignment left-hand side should be variable, not type.builtin
 (assignment
@@ -274,13 +297,21 @@
 [
   "."
   "..."
-  "::"
-] @punctuation
+] @punctuation.special
 
 [
   ","
   ";"
+  "::"
 ] @punctuation.delimiter
+
+; Treat `::` as operator in type contexts, see
+; https://github.com/nvim-treesitter/nvim-treesitter/pull/7392
+(typed_expression
+  "::" @operator)
+
+(unary_typed_expression
+  "::" @operator)
 
 [
   "("
@@ -291,13 +322,14 @@
   "}"
 ] @punctuation.bracket
 
-; Zed - added: Interpolated variables and expressions in parentheses
+; Interpolation
 (string_interpolation
-[
-  "$"
-  "("
-  ")"
-] @punctuation.special)
+  .
+  "$" @punctuation.special)
+
+(interpolation_expression
+  .
+  "$" @punctuation.special)
 
 ; Zed - added: Match the dot in the @. macro
 (macro_identifier
