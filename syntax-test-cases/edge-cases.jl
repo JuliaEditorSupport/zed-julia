@@ -17,7 +17,7 @@ end
 'w'
 
 # String interpolation
-# (highlight `$` and the outer parentheses as @punctuation.special)
+# (highlight `$` as @punctuation.special)
 "$(sqrt(2))"
 
 # Macro calls
