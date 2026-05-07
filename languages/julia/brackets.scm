@@ -56,11 +56,6 @@
   "end" @close)
   (#set! rainbow.exclude))
 
-((typegroup_definition
-  "typegroup" @open
-  "end" @close)
-  (#set! rainbow.exclude))
-
 ((module_definition
   "module" @open
   "end" @close)
