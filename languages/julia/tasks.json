@@ -9,5 +9,12 @@
       "-e",
       "'import Pkg; Pkg.test()'"
     ]
+  },
+  {
+    "label": "Julia: Open Plot Pane",
+    "command": "sh",
+    "args": ["-c", "zed ~/.cache/zed-julia/current-plot.png"],
+    "use_new_terminal": false,
+    "reveal": "never"
   }
 ]
