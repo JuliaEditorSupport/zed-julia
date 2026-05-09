@@ -91,4 +91,15 @@ if isinteractive() && !isdefined(Main, :_ZED_DISPLAY_LOADED)
     # Suppress GR's separate GUI window; PNG workstation writes to io directly.
     get!(ENV, "GKSwstype", "100")
     pushdisplay(ZedDisplay())
+    # Plotting libraries (Plots.jl, Makie.jl, …) call pushdisplay() in their
+    # __init__, which buries ZedDisplay below their own display.  Re-push
+    # ZedDisplay to the top after each package load so it stays highest priority.
+    push!(Base.package_callbacks, function(::Base.PkgId)
+        d = Base.Multimedia.displays
+        isempty(d) && return
+        d[end] isa ZedDisplay && return          # already on top
+        idx = findfirst(x -> x isa ZedDisplay, d)
+        idx === nothing && return
+        push!(d, splice!(d, idx))
+    end)
 end
