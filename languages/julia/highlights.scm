@@ -268,6 +268,55 @@
     "end"
   ] @keyword.type)
 
+; Zed - added: struct field declarations
+; Covers `x`, `x::T`, and (for `@kwdef`) `x = v`, `x::T = v`.
+(struct_definition
+  (block
+    (identifier) @variable.member))
+
+(struct_definition
+  (block
+    (typed_expression
+      . (identifier) @variable.member)))
+
+(struct_definition
+  (block
+    (assignment
+      . (identifier) @variable.member)))
+
+(struct_definition
+  (block
+    (assignment
+      . (typed_expression
+          . (identifier) @variable.member))))
+
+; Zed - added: const-qualified mutable struct fields (Julia 1.8+).
+; Same shapes as above wrapped in `const_statement`; the `= v`
+; forms only appear inside `Base.@kwdef`-wrapped structs.
+(struct_definition
+  (block
+    (const_statement
+      (identifier) @variable.member)))
+
+(struct_definition
+  (block
+    (const_statement
+      (typed_expression
+        . (identifier) @variable.member))))
+
+(struct_definition
+  (block
+    (const_statement
+      (assignment
+        . (identifier) @variable.member))))
+
+(struct_definition
+  (block
+    (const_statement
+      (assignment
+        . (typed_expression
+            . (identifier) @variable.member)))))
+
 (abstract_definition
   [
     "abstract"
