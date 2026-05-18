@@ -9,7 +9,6 @@ the [zed](https://zed.dev) editor.
 * [Installing Julia / Zed / Zed Julia extension](#installing-julia--zed--zed-julia-extension)
 * [Configuring the Julia executable for tasks](#configuring-the-julia-executable-for-tasks)
 * [Running code in the REPL](#running-code-in-the-repl)
-* [Plot side pane](#plot-side-pane)
 * [Using Zed in the REPL](#using-zed-in-the-repl)
 * [Changing settings of the LanguageServer](#changing-settings-of-the-languageserver)
 * [Customizing syntax highlighting](#customizing-syntax-highlighting)
@@ -129,65 +128,6 @@ to make this work.
       }
     ]
     ```
-
-### Plot side pane
-
-Plots from `Plots.jl`, `Makie.jl`, `Images.jl`, and any library that can
-render to `image/png` or `image/svg+xml` can be displayed in a persistent
-side pane inside Zed — no Jupyter, no IJulia, no separate window.
-
-The mechanism is a small opt-in Julia helper (`templates/zed_plot_display.jl`)
-that registers a custom `AbstractDisplay`.  Every plot overwrites a single
-fixed file (`~/.cache/zed-julia/current-plot.png`); Zed's image viewer detects
-the change via its built-in file watcher and reloads the pane in ~100 ms.
-
-#### One-time install
-
-Copy the template into your Julia config directory:
-
-```bash
-cp templates/zed_plot_display.jl ~/.julia/config/
-```
-
-Add one line to `~/.julia/config/startup.jl`:
-
-```julia
-try
-    include(joinpath(@__DIR__, "zed_plot_display.jl"))
-catch err
-    @warn "Failed to load Zed plot display" exception = (err, catch_backtrace())
-end
-```
-
-#### Usage
-
-1. Start a Julia REPL (e.g. via `julia --project` in Zed's terminal).
-2. Run **`task: spawn` → `Julia: Open Plot Pane`** from the command palette.
-   This opens `~/.cache/zed-julia/current-plot.png` in Zed's image viewer.
-3. Drag the new tab to a side pane.  That's a one-time step per Zed window.
-4. Evaluate any plot expression.  The side pane refreshes automatically.
-
-If you close the pane, re-open it at any time with `Julia: Open Plot Pane`.
-
-#### How it works
-
-- `ZedDisplay <: AbstractDisplay` intercepts any result where
-  `showable(MIME("image/png"), x)` or `showable(MIME("image/svg+xml"), x)`
-  returns `true`.  Non-image values (numbers, strings, DataFrames, …) fall
-  through to the default REPL display unchanged.
-- On the first plot of a session the helper opens the file in Zed's image
-  viewer automatically (`zed ~/.cache/zed-julia/current-plot.png`).
-- Subsequent plots overwrite the same file; Zed's `fs::watch()` triggers a
-  reload with no CLI invocation and no focus change.
-- `GKSwstype=100` is set (if not already) so the GR backend writes PNG
-  directly to the file rather than opening a separate GUI window.
-
-#### Trade-offs
-
-- Only the most recent plot is kept on disk.  Use `savefig` to retain
-  individual plots.
-- Backends that render to HTML (e.g. `PlotlyJS`) produce text output in the
-  REPL as usual; the side pane is not updated.
 
 ### Using Zed in the REPL
 
