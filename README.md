@@ -141,6 +141,12 @@ using Pkg
 Pkg.add("ZedPlotPane")
 ```
 
+To enable the plot pane, load `ZedPlotPane` (`using ZedPlotPane`) in your Julia REPL **before loading `Plots` or any other plotting package**. 
+
+The first plot will create and open `~/.cache/zed-julia/current-plot.png`. Drag that tab into a side pane; subsequent plots will update there automatically.
+
+If you close the plot pane, you can re-open it by running `ZedPlotPane._open_viewer()` in the REPL.
+
 For more information on how to use it, please refer to the [ZedPlotPane.jl documentation](https://github.com/takuizum/ZedPlotPane.jl).
 
 ### Using Zed in the REPL
