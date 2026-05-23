@@ -132,17 +132,16 @@ to make this work.
 
 ### Plot side pane
 
-The extension includes a task for opening a persistent plot pane in Zed.
-To enable it, install the Julia-side package first:
+For plot support in Zed, we recommend using [ZedPlotPane.jl](https://github.com/takuizum/ZedPlotPane.jl).
+
+To install it, run the following in your Julia REPL:
 
 ```julia
 using Pkg
-Pkg.add(url = "https://github.com/takuizum/ZedPlotPane.jl")
+Pkg.add("ZedPlotPane")
 ```
 
-After that, open a Julia REPL in Zed and run `plot()` as usual.
-The first plot opens `~/.cache/zed-julia/current-plot.png`; drag that tab into a side pane once,
-and subsequent plots will update there automatically.
+For more information on how to use it, please refer to the [ZedPlotPane.jl documentation](https://github.com/takuizum/ZedPlotPane.jl).
 
 ### Using Zed in the REPL
 
