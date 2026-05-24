@@ -1,6 +1,9 @@
 ; `@start.xxx` marks where these clauses start for `valid_after` matching in config.toml
 
 [
+  (module_definition
+    ["module" "baremodule"] @start.module
+    "end" @end)
   (struct_definition
     "struct" @start.struct
     "end" @end)

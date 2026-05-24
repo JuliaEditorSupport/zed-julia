@@ -14,10 +14,6 @@
       [(identifier) (import_path)] @name)
   ]) @item
 
-(module_definition
-  ["module" "baremodule"] @context
-  name: (identifier) @name) @item
-
 (abstract_definition
   "abstract" @context
   "type" @context
@@ -115,3 +111,27 @@
   (identifier) @_call @context
   (argument_list) @name
   (#eq? @_call "include")) @item
+
+; --- Added: Block structures for selection and outline ---
+
+(compound_statement
+  "begin" @name) @item
+
+(if_statement
+  "if" @context
+  condition: (_) @name) @item
+
+(for_statement
+  "for" @context
+  (_) @name) @item
+
+(while_statement
+  "while" @context
+  condition: (_) @name) @item
+
+(let_statement
+  "let" @context
+  (_) @name) @item
+
+(try_statement
+  "try" @name) @item

@@ -62,5 +62,5 @@ decrease_indent_patterns = [
     { pattern = "^\\s*else\\b.*", valid_after = ["if", "elseif", "try", "catch"] },
     { pattern = "^\\s*catch\\b.*", valid_after = ["try"] },
     { pattern = "^\\s*finally\\b.*", valid_after = ["try", "catch"] },
-    { pattern = "^\\s*end\\b.*", valid_after = ["function", "if", "for", "while", "begin", "let", "do", "try", "struct", "macro", "quote"] }
+    { pattern = "^\\s*end\\b.*", valid_after = ["function", "if", "for", "while", "begin", "let", "do", "try", "struct", "macro", "quote", "module"] }
 ]
