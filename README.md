@@ -3,58 +3,65 @@
 This extension adds support for the [Julia](https://julialang.org/) language in
 the [zed](https://zed.dev) editor.
 
-### Quick links
+## Quick links
 
-* [Contributing](./CONTRIBUTING.md)
-* [Installing Julia / Zed / Zed Julia extension](#installing-julia--zed--zed-julia-extension)
-* [Configuring the Julia executable for tasks](#configuring-the-julia-executable-for-tasks)
+* [Installation](#installation)
+* [Julia executable](#julia-executable)
+* [Built-in tasks](#built-in-tasks)
 * [Running code in the REPL](#running-code-in-the-repl)
 * [Plot side pane](#plot-side-pane)
-* [Using Zed in the REPL](#using-zed-in-the-repl)
-* [Changing settings of the LanguageServer](#changing-settings-of-the-languageserver)
+* [Using Zed from the Julia REPL](#using-zed-from-the-julia-repl)
+* [Changing language server settings](#changing-settings-of-the-languageserver)
 * [Customizing syntax highlighting](#customizing-syntax-highlighting)
+* [Contributing](./CONTRIBUTING.md)
 
-### Installing Julia / Zed / Zed Julia extension
+## Installation
 
-1. Install Julia for your platform: https://julialang.org/downloads/
-2. Install Zed for your platform: https://zed.dev/download
+1. Install [Julia](https://julialang.org/downloads/) for your platform.
+2. Install the latest version of [Zed](https://zed.dev/download) for your
+   platform.
 3. Start Zed.
-4. Inside Zed, go to the extensions view by
-executing the ``zed: extensions`` command (click Zed->Extensions).
-5. In the extensions view, simply search for the term ``julia`` in the search box, then select the extension named ``Julia`` and click the install button. You might have to restart Zed after this step.
+4. Inside Zed, go to the extensions view by executing the ``zed: extensions``
+   command (click Zed->Extensions).
+5. In the extensions view, simply search for the term ``julia`` in the search
+   box, then select the extension named ``Julia`` and click the install button.
 
-The Julia Zed extension looks for your Julia binary in the standard locations.
-Make sure that the Julia binary is on your ``PATH``.
+## Julia executable
 
-### Configuring the Julia executable for tasks
+By default, the language server and the [built-in Julia tasks](#built-in-tasks)
+resolve `julia` from the worktree environment's `PATH`. No configuration is
+required if the desired Julia executable is already available there.
 
-By default, Zed tasks (like running tests) use the `julia` command from your PATH.
-You can customize which Julia executable is used by setting the `julia` environment variable:
+To select Julia per project, use an approved `.envrc`:
 
-1. **In your shell configuration** (`.bashrc`, `.zshrc`, etc.):
-   ```bash
-   export julia="/path/to/custom/julia"
-   ```
+```sh
+JULIA_HOME="/path/to/julia"
+PATH_add "$JULIA_HOME/bin"
+```
 
-2. **When launching Zed from the terminal**:
-   ```bash
-   julia="/path/to/custom/julia" zed .
-   ```
+Run `direnv allow` after creating or modifying the file. This changes the Julia
+executable used by both the language server and the built-in tasks.
 
-3. **Using direnv** (automatically supported by Zed):
-   - Create a `.envrc` file in your project root with:
-     > .envrc
-     ```
-     JULIA_HOME="path/to/julia/directory"
-     PATH_add "$JULIA_HOME/bin"
-     export julia="$JULIA_HOME/bin/julia"
-     ```
-   - Run `direnv allow` to approve the file
+## Built-in tasks
 
-This allows you to use different Julia versions for different projects or to
-specify a Julia installation that's not on your PATH.
+The extension provides the following built-in tasks:
 
-### Running code in the REPL
+| Task                        | Operation            |
+| --------------------------- | -------------------- |
+| `Julia: Pkg.jl instantiate` | `Pkg.instantiate()`  |
+| `Julia: Pkg.jl precompile`  | `Pkg.precompile()`   |
+| `Julia: Pkg.jl update`      | `Pkg.update()`       |
+| `Julia: Pkg.jl resolve`     | `Pkg.resolve()`      |
+| `Julia: Pkg.jl test`        | `Pkg.test()`         |
+
+Open the command palette, run `task: spawn`
+(<kbd>Cmd+Shift+R</kbd> on macOS or <kbd>Alt+Shift+T</kbd> on Linux and Windows),
+and select a task. Each task uses the [`julia` command from the worktree environment](#julia-executable)
+and activates the project at `ZED_WORKTREE_ROOT`.
+Note that the Pkg.jl operations may modify the project environment.
+The task terminal is hidden automatically when the command succeeds.
+
+## Running code in the REPL
 
 This section describes how to select Julia code in the editor and run it in Zed's integrated
 terminal. This is more of a workaround than a full integration. Currently, there is no
@@ -130,7 +137,7 @@ to make this work.
     ]
     ```
 
-### Plot side pane
+## Plot side pane
 
 For plot support in Zed, we recommend using [ZedPlotPane.jl](https://github.com/takuizum/ZedPlotPane.jl).
 
@@ -141,7 +148,7 @@ using Pkg
 Pkg.add("ZedPlotPane")
 ```
 
-To enable the plot pane, load `ZedPlotPane` (`using ZedPlotPane`) in your Julia REPL **before loading `Plots` or any other plotting package**. 
+To enable the plot pane, load `ZedPlotPane` (`using ZedPlotPane`) in your Julia REPL **before loading `Plots` or any other plotting package**.
 
 The first plot will create and open `~/.cache/zed-julia/current-plot.png`. Drag that tab into a side pane; subsequent plots will update there automatically.
 
@@ -149,9 +156,10 @@ If you close the plot pane, you can re-open it by running `ZedPlotPane._open_vie
 
 For more information on how to use it, please refer to the [ZedPlotPane.jl documentation](https://github.com/takuizum/ZedPlotPane.jl).
 
-### Using Zed in the REPL
+## Using Zed from the Julia REPL
 
-Zed is currently not on the list of Julia's predefined editors. You can add it to your `~/.julia/config/startup.jl`:
+Zed is currently not on the list of Julia's predefined editors.
+You can add it to your `~/.julia/config/startup.jl`:
 
 ```julia
 atreplinit() do repl
@@ -161,9 +169,11 @@ atreplinit() do repl
 end
 ```
 
-Set the environment variable EDITOR (or VISUAL or JULIA_EDITOR, whatever you use) to `zed --wait`. Then, using `InteractiveUtils.edit` etc. will open the document in Zed.
+Set the environment variable `EDITOR` (or `VISUAL` or `JULIA_EDITOR`, whatever
+you use) to `zed --wait`. Then, using `InteractiveUtils.edit` etc. will open
+the document in Zed.
 
-### Changing settings of the LanguageServer
+## Changing settings of the LanguageServer
 
 The Julia LS can be customized by adding a section to your `~/.config/zed/settings.json`. Example: don't show diagnostic messages of type "missing references" with:
 
@@ -179,10 +189,10 @@ The Julia LS can be customized by adding a section to your `~/.config/zed/settin
 }
 ```
 
-We will add autocompletions for the available settings later (there is some groundwork missing in Zed). For now, have a look at the `lint` keys in 
+We will add autocompletions for the available settings later (there is some groundwork missing in Zed). For now, have a look at the `lint` keys in
 [julia-vscode](https://github.com/julia-vscode/julia-vscode/blob/8f8d879dc62dee1658115c40dc4e156e9c0cffe4/package.json#L874).
 
-### Customizing syntax highlighting
+## Customizing syntax highlighting
 
 You can change the foreground color and text attributes of syntax tokens in your `~/.config/zed/settings.json`, for instance:
 
@@ -204,16 +214,24 @@ You can change the foreground color and text attributes of syntax tokens in your
 }
 ```
 
-See [Syntax Highlighting and Themes](https://zed.dev/docs/configuring-languages#syntax-highlighting-and-themes) and [Tree-sitter Queries](https://zed.dev/docs/extensions/languages#tree-sitter-queries) for further details.
+See [Syntax Highlighting and Themes](https://zed.dev/docs/configuring-languages#syntax-highlighting-and-themes)
+and [Tree-sitter Queries](https://zed.dev/docs/extensions/languages#tree-sitter-queries)
+for further details.
 
-Syntax tokens are called *captures* in tree-sitter jargon. The following table lists all captures provided by zed-julia. Some captures have default values (defined in [Zed's color themes](https://github.com/zed-industries/zed/blob/main/assets/themes/)) and the other captures fall back to one of the defaults. Depending on your color theme, some captures may be set to the editor's foreground color or to a very similar one. In this case, try to assign a different color to improve the contrast. 
+Syntax tokens are called *captures* in tree-sitter jargon.
+The following table lists all captures provided by zed-julia. Some captures have
+default values (defined in [Zed's color themes](https://github.com/zed-industries/zed/blob/main/assets/themes/))
+and the other captures fall back to one of the defaults.
+Depending on your color theme, some captures may be set to the editor's
+foreground color or to a very similar one. In this case, try to assign a
+different color to improve the contrast.
 
-| Capture | Is there a default value? | Note/Example | 
+| Capture | Is there a default value? | Note/Example |
 | ------- | ------------------------- | ------------ |
 | boolean | yes |
 | comment | yes | line or block comment |
 | comment.doc | yes | docstring |
-| constant | yes | 
+| constant | yes |
 | constant.builtin | no, falls back to constant | core julia built-in |
 | function.builtin | no, falls back to function | core julia built-in |
 | function.call | no, falls back to function | name of the called function |
