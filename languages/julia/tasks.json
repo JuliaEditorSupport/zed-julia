@@ -1,13 +1,62 @@
 [
   {
-    "label": "julia test",
+    "label": "Julia: Pkg.jl instantiate",
     "command": "julia",
+    "cwd": "$ZED_WORKTREE_ROOT",
     "args": [
-      "--project=$ZED_WORKTREE_ROOT",
       "--startup-file=no",
-      "--history-file=no",
+      "--project=.",
       "-e",
-      "'import Pkg; Pkg.test()'"
-    ]
+      "\"using Pkg; Pkg.instantiate()\""
+    ],
+    "hide": "on_success"
+  },
+  {
+    "label": "Julia: Pkg.jl precompile",
+    "command": "julia",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "args": [
+      "--startup-file=no",
+      "--project=.",
+      "-e",
+      "\"using Pkg; Pkg.precompile()\""
+    ],
+    "hide": "on_success"
+  },
+  {
+    "label": "Julia: Pkg.jl update",
+    "command": "julia",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "args": [
+      "--startup-file=no",
+      "--project=.",
+      "-e",
+      "\"using Pkg; Pkg.update()\""
+    ],
+    "hide": "on_success"
+  },
+  {
+    "label": "Julia: Pkg.jl resolve",
+    "command": "julia",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "args": [
+      "--startup-file=no",
+      "--project=.",
+      "-e",
+      "\"using Pkg; Pkg.resolve()\""
+    ],
+    "hide": "on_success"
+  },
+  {
+    "label": "Julia: Pkg.jl test",
+    "command": "julia",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "args": [
+      "--startup-file=no",
+      "--project=.",
+      "-e",
+      "\"using Pkg; Pkg.test()\""
+    ],
+    "hide": "on_success"
   }
 ]
