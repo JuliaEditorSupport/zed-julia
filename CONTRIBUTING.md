@@ -26,5 +26,8 @@ check the [tree-sitter-julia issue tracker](https://github.com/tree-sitter/tree-
 
 ### Language server integration
 
-If you find an issue with the language server,
-check the [LanguageServer.jl issue tracker](https://github.com/julia-vscode/LanguageServer.jl/issues).
+Report issues with managed installation, Julia runtime selection, Zed settings,
+or other extension integration in the
+[zed-julia issue tracker](https://github.com/JuliaEditorSupport/zed-julia/issues).
+If the behavior also occurs when running JETLS independently of Zed, check the
+[JETLS.jl issue tracker](https://github.com/aviatesk/JETLS.jl/issues).

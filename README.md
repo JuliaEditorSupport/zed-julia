@@ -1,38 +1,42 @@
 # Zed Julia
 
-This extension adds support for the [Julia](https://julialang.org/) language in
-the [zed](https://zed.dev) editor.
+This extension adds [Julia](https://julialang.org/) support to
+[Zed](https://zed.dev/), powered by
+[JETLS](https://github.com/aviatesk/JETLS.jl) language server.
+
+![Zed with JETLS completions and diagnostics](./zed-julia.png)
 
 ## Quick links
 
 * [Installation](#installation)
 * [Julia executable](#julia-executable)
+* [Language server](#language-server)
 * [Built-in tasks](#built-in-tasks)
 * [Running code in the REPL](#running-code-in-the-repl)
 * [Plot side pane](#plot-side-pane)
 * [Using Zed from the Julia REPL](#using-zed-from-the-julia-repl)
-* [Changing language server settings](#changing-settings-of-the-languageserver)
 * [Customizing syntax highlighting](#customizing-syntax-highlighting)
 * [Contributing](./CONTRIBUTING.md)
 
 ## Installation
 
-1. Install [Julia](https://julialang.org/downloads/) for your platform.
-2. Install the latest version of [Zed](https://zed.dev/download) for your
+1. Install the latest version of [Zed](https://zed.dev/download) for your
    platform.
-3. Start Zed.
-4. Inside Zed, go to the extensions view by executing the ``zed: extensions``
+2. Start Zed.
+3. Inside Zed, go to the extensions view by executing the ``zed: extensions``
    command (click Zed->Extensions).
-5. In the extensions view, simply search for the term ``julia`` in the search
+4. In the extensions view, simply search for the term ``julia`` in the search
    box, then select the extension named ``Julia`` and click the install button.
 
 ## Julia executable
 
-By default, the language server and the [built-in Julia tasks](#built-in-tasks)
+By default, [JETLS](#language-server) and the [built-in Julia tasks](#built-in-tasks)
 resolve `julia` from the worktree environment's `PATH`. No configuration is
 required if the desired Julia executable is already available there.
 
-To select Julia per project, use an approved `.envrc`:
+To select Julia per project, use an approved [direnv](https://direnv.net) file:
+
+> `.envrc` (project root)
 
 ```sh
 JULIA_HOME="/path/to/julia"
@@ -40,7 +44,336 @@ PATH_add "$JULIA_HOME/bin"
 ```
 
 Run `direnv allow` after creating or modifying the file. This changes the Julia
-executable used by both the language server and the built-in tasks.
+executable used by both JETLS and the built-in tasks.
+
+## Language server
+
+> [!important]
+> Version 0.2 is a breaking migration from
+> [LanguageServer.jl](https://github.com/julia-vscode/LanguageServer.jl) to
+> JETLS. See [Migrating to version 0.2](#migrating-to-version-02) for the new
+> requirements and configuration changes.
+
+> [!warning]
+> JETLS is a new language server and still experimental. Notably, it currently
+> has a known memory leak issue where memory usage grows with each re-analysis
+> (see the [announcement](https://aviatesk.github.io/JETLS.jl/release/CHANGELOG/#Announcement)
+> for details and a workaround). If the language server causes problems, you
+> can [disable it](#disabling-the-language-server) and keep using the rest of
+> the extension.
+
+### Julia for JETLS
+
+JETLS requires [Julia 1.12.2 through 1.13](https://julialang.org/downloads/).
+To override only the Julia executable used by managed JETLS without changing the
+worktree `PATH`, set the standard Pkg app runtime override:
+
+> `~/.config/zed/settings.json` (global) or `.zed/settings.json` (per-project)
+
+```jsonc
+{
+  "lsp": {
+    "JETLS": {
+      "binary": {
+        "env": {
+          "JULIA_APPS_JULIA_CMD": "/path/to/specific/julia/executable"
+        }
+      }
+    }
+  }
+}
+```
+
+The selected Julia executable is used to
+[install and update JETLS](#automatic-installation-and-updates), verify the
+installation, and [launch the server](#launch-configuration).
+
+Each executable and Julia minor version (e.g. 1.12 vs 1.13) combination uses a
+separate managed depot, so worktrees can select different Julia installations
+without repeatedly reinstalling JETLS, and Julia patch releases reuse the
+existing depot.
+
+### Automatic installation and updates
+
+Using the selected Julia executable, the extension automatically installs a
+pinned JETLS release as a [Julia Pkg app](https://pkgdocs.julialang.org/dev/apps/)
+the first time it is needed. Network access is required when JETLS is installed
+or updated.
+
+JETLS is installed into a depot private to the extension, so this does not
+create or modify a user-global `~/.julia/bin/jetls`. Each zed-julia release
+pins an exact JETLS release. When that pin changes, Zed's normal extension
+auto-update causes the managed JETLS installation to update as well. Once the
+pinned release is installed, verifying and launching the managed JETLS
+installation does not require network access. JETLS may still access the network
+to instantiate a workspace package environment unless
+`full_analysis.auto_instantiate` is disabled.
+
+The initial installation may take several minutes while Julia installs and
+precompiles JETLS.
+
+> [!tip]
+> The managed depots live in the `jetls-depots` directory inside Zed's work
+> directory for this extension (on macOS, for example,
+> `~/Library/Application Support/Zed/extensions/work/julia/jetls-depots`).
+> After an update, the extension garbage-collects previous JETLS versions from
+> the depot. It is always safe to delete `jetls-depots` or individual depots
+> inside it to reclaim disk space: the pinned JETLS release is reinstalled
+> automatically the next time the language server starts.
+
+### Launch configuration
+
+JETLS runs with `--threads=auto` by default. You can customize how it is
+launched in the `lsp.JETLS` section of Zed settings.
+
+#### Managed JETLS arguments
+
+When `binary.path` is omitted, the extension uses its managed JETLS installation.
+Custom `binary.arguments` must include exactly one
+[`serve`](https://aviatesk.github.io/JETLS.jl/release/launching/) subcommand of
+JETLS. To specify a different `--threads` option:
+
+> `~/.config/zed/settings.json` (global) or `.zed/settings.json` (per-project)
+
+```jsonc
+{
+  "lsp": {
+    "JETLS": {
+      "binary": {
+        "arguments": ["--threads=1", "--", "serve"]
+      }
+    }
+  }
+}
+```
+
+`binary.arguments` can be combined with
+[`binary.env.JULIA_APPS_JULIA_CMD`](#julia-for-jetls) to use custom arguments
+with a specific Julia executable:
+
+> `~/.config/zed/settings.json` (global) or `.zed/settings.json` (per-project)
+
+```jsonc
+{
+  "lsp": {
+    "JETLS": {
+      "binary": {
+        "arguments": ["--threads=1", "--", "serve"],
+        "env": {
+          "JULIA_APPS_JULIA_CMD": "/path/to/specific/julia/executable"
+        }
+      }
+    }
+  }
+}
+```
+
+#### Custom JETLS command
+
+To launch a local JETLS checkout, a wrapper script, or another custom command,
+set `binary.path` to a command that starts a compatible language server over
+standard input and output.
+
+Zed accepts absolute paths, `~`-relative paths, worktree-relative executables
+such as `tools/start-jetls`, and bare commands such as `julia`.
+Worktree-relative paths are resolved against the worktree root; bare commands
+that are not worktree entries are resolved through the worktree `PATH`.
+Scripts must be directly executable; otherwise, set `binary.path` to their
+interpreter and include the script path in `binary.arguments`.
+
+> [!note]
+> Setting `binary.path` bypasses the extension's managed installation and
+> version preflight. Install custom commands yourself, and complete any required
+> compilation before starting the language server to avoid the LSP
+> initialization timeout.
+
+For example, to launch a local JETLS checkout with Julia from the worktree
+`PATH`:
+
+> `~/.config/zed/settings.json` (global) or `.zed/settings.json` (per-project)
+
+```jsonc
+{
+  "lsp": {
+    "JETLS": {
+      "binary": {
+        "path": "julia",
+        "arguments": [
+          "--startup-file=no",
+          "--history-file=no",
+          "--threads=auto",
+          "--project=/path/to/JETLS/directory",
+          "-m",
+          "JETLS",
+          "serve"
+        ]
+      }
+    }
+  }
+}
+```
+
+### Server configuration
+
+JETLS has dynamic configuration, which can change throughout the server's lifetime,
+and static initialization options, which are set once at server startup.
+Both can be set in a project-local `.JETLSConfig.toml` or in Zed settings.
+Dynamic configuration changes are applied to the running server automatically
+with either method, while changes to initialization options require restarting
+the language server.
+
+#### Method 1: Project-specific configuration file
+
+This method uses JETLS's native
+[`.JETLSConfig.toml` configuration file](https://aviatesk.github.io/JETLS.jl/release/configuration/#config/file-based-config)
+and is therefore editor-agnostic: the same file configures JETLS in any editor,
+as well as its CLI (e.g. `jetls check`). Create a configuration file, e.g.:
+
+> `.JETLSConfig.toml` (project root)
+
+```toml
+# Use JuliaFormatter instead of Runic
+formatter = "JuliaFormatter"
+
+# Prevent JETLS from automatically instantiating the package environment
+[full_analysis]
+auto_instantiate = false
+
+# Suppress unused argument warnings
+[[diagnostic.patterns]]
+pattern = "lowering/unused-argument"
+match_by = "code"
+match_type = "literal"
+severity = "off"
+
+# Reuse Julia's native inference cache for faster full analysis
+[initialization_options]
+reuse_native_inference = true
+```
+
+#### Method 2: Zed settings
+
+This method uses JETLS's
+[LSP-based configuration](https://aviatesk.github.io/JETLS.jl/release/configuration/#config/lsp-config)
+mechanism, which Zed supports natively: when you change `initialization_options`
+and save `settings.json`, Zed automatically restarts the server to apply them.
+Configure initialization options and server settings under the `lsp.JETLS` section:
+
+> `~/.config/zed/settings.json` (global) or `.zed/settings.json` (per-project)
+
+```jsonc
+{
+  "lsp": {
+    "JETLS": {
+      "settings": {
+        // Prevent JETLS from automatically instantiating the package environment
+        "full_analysis": {
+          "auto_instantiate": false
+        },
+        // Use JuliaFormatter instead of Runic
+        "formatter": "JuliaFormatter",
+        // Suppress unused argument warnings
+        "diagnostic": {
+          "patterns": [
+            {
+              "pattern": "lowering/unused-argument",
+              "match_by": "code",
+              "match_type": "literal",
+              "severity": "off"
+            }
+          ]
+        }
+      },
+      "initialization_options": {
+        // Reuse Julia's native inference cache for faster full analysis
+        "reuse_native_inference": true
+      }
+    }
+  }
+}
+```
+
+> [!note]
+> `.JETLSConfig.toml` takes precedence over editor settings when both are present.
+
+For complete configuration details, see the JETLS documentation for
+[configuration](https://aviatesk.github.io/JETLS.jl/release/configuration/) and
+[initialization options](https://aviatesk.github.io/JETLS.jl/release/launching/#init-options).
+
+### Formatting
+
+JETLS delegates formatting to an external formatter executable. Install the
+formatter you want to use as a Julia Pkg app and ensure that its executable is
+available on `PATH`. Julia Pkg apps are normally installed into `~/.julia/bin`.
+
+#### Runic
+
+[Runic](https://github.com/fredrikekre/Runic.jl) is the default formatter:
+
+```sh
+julia -e 'using Pkg; Pkg.Apps.add("Runic")'
+```
+
+JETLS invokes the `runic` executable for document and range formatting.
+
+#### JuliaFormatter
+
+To use [JuliaFormatter](https://github.com/domluna/JuliaFormatter.jl) instead,
+install its `jlfmt` executable:
+
+```sh
+julia -e 'using Pkg; Pkg.Apps.add("JuliaFormatter")'
+```
+
+Then set `formatter = "JuliaFormatter"` using either configuration method
+above. Range formatting requires JuliaFormatter v2.7.0 or later.
+
+For custom formatter executables and further details, see the JETLS
+[formatter documentation](https://aviatesk.github.io/JETLS.jl/release/formatting/).
+
+### Disabling the language server
+
+If JETLS causes problems, you can disable it while keeping the rest of the
+extension working: syntax highlighting, [built-in tasks](#built-in-tasks),
+[REPL integration](#running-code-in-the-repl), and so on. Add the following
+setting:
+
+> `~/.config/zed/settings.json` (global) or `.zed/settings.json` (per-project)
+
+```jsonc
+{
+  "languages": {
+    "Julia": {
+      "enable_language_server": false
+    }
+  }
+}
+```
+
+Remove the setting to re-enable JETLS.
+
+### Migrating to version 0.2
+
+Zed Julia extension v0.2 replaces the
+[LanguageServer.jl](https://github.com/julia-vscode/LanguageServer.jl) backend
+with [JETLS.jl](https://github.com/aviatesk/JETLS.jl).
+This is a breaking migration for existing users:
+
+- JETLS requires Julia 1.12.2 through 1.13. See
+  [Julia for JETLS](#julia-for-jetls) for runtime selection.
+- The language-server identifier has changed from `julia` to `JETLS`. Existing
+  LanguageServer.jl settings under `lsp.julia` are not migrated or forwarded to
+  JETLS; configure the new server under `lsp.JETLS`.
+- The extension now [installs and updates](#automatic-installation-and-updates)
+  a pinned JETLS Julia Pkg app in an extension-private depot. The
+  LanguageServer.jl environment previously used by the extension is no longer
+  used.
+- JETLS uses Runic as its default formatter. See [Formatting](#formatting) for
+  installation instructions and the JuliaFormatter alternative.
+
+If JETLS is not suitable for your current setup, you can
+[disable the language server](#disabling-the-language-server) while continuing
+to use syntax highlighting, built-in tasks, and the other extension features.
 
 ## Built-in tasks
 
@@ -84,8 +417,9 @@ to make this work.
     Note: interacting with the terminal requires to send keystrokes. In the examples,
     `cmd-v` is used to paste code. Please adjust this binding for your operating system.
 
+    > `~/.config/zed/keymap.json` (can be opened via ``zed: open keymap file``)
+
     ```jsonc
-    // Zed key map file, usually ~/.config/zed/keymap.json
     [
       {
         // Set the focus back to the editor without hiding the terminal.
@@ -159,7 +493,9 @@ For more information on how to use it, please refer to the [ZedPlotPane.jl docum
 ## Using Zed from the Julia REPL
 
 Zed is currently not on the list of Julia's predefined editors.
-You can add it to your `~/.julia/config/startup.jl`:
+You can register it in your Julia startup file:
+
+> `~/.julia/config/startup.jl`
 
 ```julia
 atreplinit() do repl
@@ -173,28 +509,12 @@ Set the environment variable `EDITOR` (or `VISUAL` or `JULIA_EDITOR`, whatever
 you use) to `zed --wait`. Then, using `InteractiveUtils.edit` etc. will open
 the document in Zed.
 
-## Changing settings of the LanguageServer
-
-The Julia LS can be customized by adding a section to your `~/.config/zed/settings.json`. Example: don't show diagnostic messages of type "missing references" with:
-
-```json
-{
-  "lsp": {
-    "julia": {
-      "settings": {
-        "julia.lint.missingrefs": "none"
-      }
-    }
-  }
-}
-```
-
-We will add autocompletions for the available settings later (there is some groundwork missing in Zed). For now, have a look at the `lint` keys in
-[julia-vscode](https://github.com/julia-vscode/julia-vscode/blob/8f8d879dc62dee1658115c40dc4e156e9c0cffe4/package.json#L874).
-
 ## Customizing syntax highlighting
 
-You can change the foreground color and text attributes of syntax tokens in your `~/.config/zed/settings.json`, for instance:
+You can change the foreground color and text attributes of syntax tokens,
+for instance:
+
+> `~/.config/zed/settings.json`
 
 ```json
 {
