@@ -1,60 +1,86 @@
 # Zed Julia
 
 This extension adds [Julia](https://julialang.org/) support to
-[Zed](https://zed.dev/), powered by
+[Zed](https://zed.dev/), powered by the
 [JETLS](https://github.com/aviatesk/JETLS.jl) language server.
 
 ![Zed with JETLS completions and diagnostics](./zed-julia.png)
 
 ## Quick links
 
-* [Installation](#installation)
-* [Julia executable](#julia-executable)
-* [Language server](#language-server)
-* [Built-in tasks](#built-in-tasks)
-* [Running code in the REPL](#running-code-in-the-repl)
-* [Plot side pane](#plot-side-pane)
-* [Using Zed from the Julia REPL](#using-zed-from-the-julia-repl)
-* [Customizing syntax highlighting](#customizing-syntax-highlighting)
-* [Contributing](./CONTRIBUTING.md)
+- [Installation](#installation)
+- [Julia executable](#julia-executable)
+- [Language server](#language-server)
+- [Built-in tasks](#built-in-tasks)
+- [Running code in the REPL](#running-code-in-the-repl)
+- [Plot side pane](#plot-side-pane)
+- [Using Zed from the Julia REPL](#using-zed-from-the-julia-repl)
+- [Customizing syntax highlighting](#customizing-syntax-highlighting)
+- [Contributing](./CONTRIBUTING.md)
 
 ## Installation
 
 1. Install the latest version of [Zed](https://zed.dev/download) for your
    platform.
 2. Start Zed.
-3. Inside Zed, go to the extensions view by executing the ``zed: extensions``
-   command (click Zed->Extensions).
-4. In the extensions view, simply search for the term ``julia`` in the search
-   box, then select the extension named ``Julia`` and click the install button.
+3. Inside Zed, go to the extensions view by executing the `zed: extensions`
+   command (or click Zed->Extensions).
+4. In the extensions view, simply search for the term `julia` in the search
+   box, then select the extension named `Julia` and click the install button.
 
 ## Julia executable
 
-By default, [JETLS](#language-server) and the [built-in Julia tasks](#built-in-tasks)
-resolve `julia` from the worktree environment's `PATH`. No configuration is
-required if the desired Julia executable is already available there.
+By default, [JETLS](#language-server) and the
+[built-in Julia tasks](#built-in-tasks) resolve `julia` from the worktree
+environment's `PATH`. No configuration is required if the desired Julia
+executable is already available there.
 
 To select Julia per project, use an approved [direnv](https://direnv.net) file:
 
-> `.envrc` (project root)
+- If you use [juliaup](https://github.com/JuliaLang/juliaup), select the
+  Julia channel by setting `JULIAUP_CHANNEL`:
 
-```sh
-JULIA_HOME="/path/to/julia"
-PATH_add "$JULIA_HOME/bin"
-```
+  > `.envrc` (project root)
+
+  ```sh
+  export JULIAUP_CHANNEL=1.13
+  ```
+
+  This takes effect when `julia` on the worktree `PATH` resolves to the
+  juliaup launcher.
+
+- To put a specific Julia installation on `PATH`:
+
+  > `.envrc` (project root)
+
+  ```sh
+  JULIA_HOME="/path/to/julia"
+  PATH_add "$JULIA_HOME/bin"
+  ```
 
 Run `direnv allow` after creating or modifying the file. This changes the Julia
 executable used by both JETLS and the built-in tasks.
 
+> [!warning]
+>
+> Zed loads the worktree environment once per session, so `.envrc` changes
+> (including `direnv allow`) do not affect an already-open project — not even
+> after a language server restart. Reopen the project to apply them.
+
+To override Julia only for JETLS, see [Julia for JETLS](#julia-for-jetls);
+unlike `.envrc` edits, those settings apply with an automatic server restart.
+
 ## Language server
 
 > [!important]
+>
 > Version 0.2 is a breaking migration from
 > [LanguageServer.jl](https://github.com/julia-vscode/LanguageServer.jl) to
 > JETLS. See [Migrating to version 0.2](#migrating-to-version-02) for the new
 > requirements and configuration changes.
 
 > [!warning]
+>
 > JETLS is a new language server and still experimental. Notably, it currently
 > has a known memory leak issue where memory usage grows with each re-analysis
 > (see the [announcement](https://aviatesk.github.io/JETLS.jl/release/CHANGELOG/#Announcement)
@@ -64,25 +90,57 @@ executable used by both JETLS and the built-in tasks.
 
 ### Julia for JETLS
 
-JETLS requires [Julia 1.12.2 through 1.13](https://julialang.org/downloads/).
-To override only the Julia executable used by managed JETLS without changing the
-worktree `PATH`, set the standard Pkg app runtime override:
+JETLS requires [Julia](https://julialang.org/downloads) v1.12.2 through 1.13.x.
+To override only the Julia runtime used by managed JETLS without changing
+the worktree `PATH`, set `binary.env` in Zed settings. Unlike the
+[direnv method](#julia-executable), these overrides apply only to JETLS,
+not to the built-in tasks, and changing them restarts the server
+automatically:
 
-> `~/.config/zed/settings.json` (global) or `.zed/settings.json` (per-project)
+- If you use [juliaup](https://github.com/JuliaLang/juliaup), select the
+  Julia channel by setting `JULIAUP_CHANNEL`:
 
-```jsonc
-{
-  "lsp": {
-    "JETLS": {
-      "binary": {
-        "env": {
-          "JULIA_APPS_JULIA_CMD": "/path/to/specific/julia/executable"
-        }
-      }
-    }
+  > `~/.config/zed/settings.json` (global) or `.zed/settings.json` (per-project)
+
+  ```jsonc
+  {
+    "lsp": {
+      "JETLS": {
+        "binary": {
+          "env": {
+            "JULIAUP_CHANNEL": "1.13",
+          },
+        },
+      },
+    },
   }
-}
-```
+  ```
+
+  This takes effect when `julia` on the worktree `PATH` resolves to the
+  juliaup launcher.
+
+- To specify a Julia executable directly, set the standard Pkg app runtime
+  override `JULIA_APPS_JULIA_CMD`:
+
+  > `~/.config/zed/settings.json` (global) or `.zed/settings.json` (per-project)
+
+  ```jsonc
+  {
+    "lsp": {
+      "JETLS": {
+        "binary": {
+          "env": {
+            "JULIA_APPS_JULIA_CMD": "/path/to/specific/julia/executable",
+          },
+        },
+      },
+    },
+  }
+  ```
+
+  The command must be the Julia executable itself (on Windows, `julia.exe`
+  rather than a `.bat`/`.cmd` wrapper), since the extension spawns it
+  directly; `JULIAUP_CHANNEL` is ignored in this case.
 
 The selected Julia executable is used to
 [install and update JETLS](#automatic-installation-and-updates), verify the
@@ -113,6 +171,7 @@ The initial installation may take several minutes while Julia installs and
 precompiles JETLS.
 
 > [!tip]
+>
 > The managed depots live in the `jetls-depots` directory inside Zed's work
 > directory for this extension (on macOS, for example,
 > `~/Library/Application Support/Zed/extensions/work/julia/jetls-depots`).
@@ -123,33 +182,25 @@ precompiles JETLS.
 
 ### Launch configuration
 
-JETLS runs with `--threads=auto` by default. You can customize how it is
-launched in the `lsp.JETLS` section of Zed settings.
+Most users do not need any launch configuration. When the defaults do not
+fit your setup, customize how the server is launched in the `lsp.JETLS`
+section of Zed settings.
 
 #### Managed JETLS arguments
 
-When `binary.path` is omitted, the extension uses its managed JETLS installation.
-Custom `binary.arguments` must include exactly one
-[`serve`](https://aviatesk.github.io/JETLS.jl/release/launching/) subcommand of
-JETLS. To specify a different `--threads` option:
+When `binary.path` is omitted, the extension launches the managed JETLS
+installation as:
 
-> `~/.config/zed/settings.json` (global) or `.zed/settings.json` (per-project)
-
-```jsonc
-{
-  "lsp": {
-    "JETLS": {
-      "binary": {
-        "arguments": ["--threads=1", "--", "serve"]
-      }
-    }
-  }
-}
+```sh
+julia --startup-file=no --history-file=no --threads=auto -m JETLS serve
 ```
 
-`binary.arguments` can be combined with
-[`binary.env.JULIA_APPS_JULIA_CMD`](#julia-for-jetls) to use custom arguments
-with a specific Julia executable:
+Custom `binary.arguments` replace the default `["serve"]`: arguments before
+a `--` separator are passed to `julia` itself (after the defaults above, so
+they can override them), and the rest are passed to JETLS. The arguments
+must include exactly one
+[`serve`](https://aviatesk.github.io/JETLS.jl/release/launching/) subcommand
+of JETLS. For example, to run the server on a single thread:
 
 > `~/.config/zed/settings.json` (global) or `.zed/settings.json` (per-project)
 
@@ -159,19 +210,19 @@ with a specific Julia executable:
     "JETLS": {
       "binary": {
         "arguments": ["--threads=1", "--", "serve"],
-        "env": {
-          "JULIA_APPS_JULIA_CMD": "/path/to/specific/julia/executable"
-        }
-      }
-    }
-  }
+      },
+    },
+  },
 }
 ```
 
+`binary.arguments` can be combined with the
+[`binary.env` runtime overrides](#julia-for-jetls) to pair custom arguments
+with a specific Julia channel or executable.
+
 #### Custom JETLS command
 
-To launch a local JETLS checkout, a wrapper script, or another custom command,
-set `binary.path` to a command that starts a compatible language server over
+Set `binary.path` to a command that starts a compatible language server over
 standard input and output.
 
 Zed accepts absolute paths, `~`-relative paths, worktree-relative executables
@@ -182,41 +233,61 @@ Scripts must be directly executable; otherwise, set `binary.path` to their
 interpreter and include the script path in `binary.arguments`.
 
 > [!note]
+>
 > Setting `binary.path` bypasses the extension's managed installation and
 > version preflight. Install custom commands yourself, and complete any required
 > compilation before starting the language server to avoid the LSP
 > initialization timeout.
 
-For example, to launch a local JETLS checkout with Julia from the worktree
-`PATH`:
+- To use a JETLS binary you manage yourself, such as a user-global
+  `~/.julia/bin/jetls` installed with
+  [`Pkg.Apps`](https://pkgdocs.julialang.org/dev/apps/):
 
-> `~/.config/zed/settings.json` (global) or `.zed/settings.json` (per-project)
+  > `~/.config/zed/settings.json` (global) or `.zed/settings.json` (per-project)
 
-```jsonc
-{
-  "lsp": {
-    "JETLS": {
-      "binary": {
-        "path": "julia",
-        "arguments": [
-          "--startup-file=no",
-          "--history-file=no",
-          "--threads=auto",
-          "--project=/path/to/JETLS/directory",
-          "-m",
-          "JETLS",
-          "serve"
-        ]
-      }
-    }
+  ```jsonc
+  {
+    "lsp": {
+      "JETLS": {
+        "binary": {
+          "path": "~/.julia/bin/jetls",
+          "arguments": ["serve"],
+        },
+      },
+    },
   }
-}
-```
+  ```
+
+- To develop JETLS from a local checkout, launch it with Julia directly:
+
+  > `~/.config/zed/settings.json` (global) or `.zed/settings.json` (per-project)
+
+  ```jsonc
+  {
+    "lsp": {
+      "JETLS": {
+        "binary": {
+          "path": "julia",
+          "arguments": [
+            "--startup-file=no",
+            "--history-file=no",
+            "--threads=auto",
+            "--project=/path/to/JETLS/directory",
+            "-m",
+            "JETLS",
+            "serve",
+          ],
+        },
+      },
+    },
+  }
+  ```
 
 ### Server configuration
 
-JETLS has dynamic configuration, which can change throughout the server's lifetime,
-and static initialization options, which are set once at server startup.
+JETLS has dynamic configuration, which can change throughout the server's
+lifetime, and static initialization options, which are set once at server
+startup.
 Both can be set in a project-local `.JETLSConfig.toml` or in Zed settings.
 Dynamic configuration changes are applied to the running server automatically
 with either method, while changes to initialization options require restarting
@@ -257,7 +328,8 @@ This method uses JETLS's
 [LSP-based configuration](https://aviatesk.github.io/JETLS.jl/release/configuration/#config/lsp-config)
 mechanism, which Zed supports natively: when you change `initialization_options`
 and save `settings.json`, Zed automatically restarts the server to apply them.
-Configure initialization options and server settings under the `lsp.JETLS` section:
+Configure initialization options and server settings under the `lsp.JETLS`
+section:
 
 > `~/.config/zed/settings.json` (global) or `.zed/settings.json` (per-project)
 
@@ -266,9 +338,10 @@ Configure initialization options and server settings under the `lsp.JETLS` secti
   "lsp": {
     "JETLS": {
       "settings": {
-        // Prevent JETLS from automatically instantiating the package environment
+        // Prevent JETLS from automatically instantiating the package
+        // environment
         "full_analysis": {
-          "auto_instantiate": false
+          "auto_instantiate": false,
         },
         // Use JuliaFormatter instead of Runic
         "formatter": "JuliaFormatter",
@@ -279,22 +352,24 @@ Configure initialization options and server settings under the `lsp.JETLS` secti
               "pattern": "lowering/unused-argument",
               "match_by": "code",
               "match_type": "literal",
-              "severity": "off"
-            }
-          ]
-        }
+              "severity": "off",
+            },
+          ],
+        },
       },
       "initialization_options": {
         // Reuse Julia's native inference cache for faster full analysis
-        "reuse_native_inference": true
-      }
-    }
-  }
+        "reuse_native_inference": true,
+      },
+    },
+  },
 }
 ```
 
 > [!note]
-> `.JETLSConfig.toml` takes precedence over editor settings when both are present.
+>
+> `.JETLSConfig.toml` takes precedence over editor settings when both are
+> present.
 
 For complete configuration details, see the JETLS documentation for
 [configuration](https://aviatesk.github.io/JETLS.jl/release/configuration/) and
@@ -344,9 +419,9 @@ setting:
 {
   "languages": {
     "Julia": {
-      "enable_language_server": false
-    }
-  }
+      "enable_language_server": false,
+    },
+  },
 }
 ```
 
@@ -359,7 +434,7 @@ Zed Julia extension v0.2 replaces the
 with [JETLS.jl](https://github.com/aviatesk/JETLS.jl).
 This is a breaking migration for existing users:
 
-- JETLS requires Julia 1.12.2 through 1.13. See
+- JETLS requires Julia v1.12.2 through 1.13.x. See
   [Julia for JETLS](#julia-for-jetls) for runtime selection.
 - The language-server identifier has changed from `julia` to `JETLS`. Existing
   LanguageServer.jl settings under `lsp.julia` are not migrated or forwarded to
@@ -379,101 +454,106 @@ to use syntax highlighting, built-in tasks, and the other extension features.
 
 The extension provides the following built-in tasks:
 
-| Task                        | Operation            |
-| --------------------------- | -------------------- |
-| `Julia: Pkg.jl instantiate` | `Pkg.instantiate()`  |
-| `Julia: Pkg.jl precompile`  | `Pkg.precompile()`   |
-| `Julia: Pkg.jl update`      | `Pkg.update()`       |
-| `Julia: Pkg.jl resolve`     | `Pkg.resolve()`      |
-| `Julia: Pkg.jl test`        | `Pkg.test()`         |
+| Task                        | Operation           |
+| --------------------------- | ------------------- |
+| `Julia: Pkg.jl instantiate` | `Pkg.instantiate()` |
+| `Julia: Pkg.jl precompile`  | `Pkg.precompile()`  |
+| `Julia: Pkg.jl update`      | `Pkg.update()`      |
+| `Julia: Pkg.jl resolve`     | `Pkg.resolve()`     |
+| `Julia: Pkg.jl test`        | `Pkg.test()`        |
 
-Open the command palette, run `task: spawn`
-(<kbd>Cmd+Shift+R</kbd> on macOS or <kbd>Alt+Shift+T</kbd> on Linux and Windows),
-and select a task. Each task uses the [`julia` command from the worktree environment](#julia-executable)
+Open the command palette, run `task: spawn` (<kbd>Cmd+Shift+R</kbd> on macOS
+or <kbd>Alt+Shift+T</kbd> on Linux and Windows), and select a task. Each task
+uses the [`julia` command from the worktree environment](#julia-executable)
 and activates the project at `ZED_WORKTREE_ROOT`.
 Note that the Pkg.jl operations may modify the project environment.
 The task terminal is hidden automatically when the command succeeds.
 
 ## Running code in the REPL
 
-This section describes how to select Julia code in the editor and run it in Zed's integrated
-terminal. This is more of a workaround than a full integration. Currently, there is no
-_inline code execution_ as in VSCode. On the other hand, the Language Server is not required
-to make this work.
+This section describes how to select Julia code in the editor and run it in
+Zed's integrated terminal. This is more of a workaround than a full
+integration. Currently, there is no _inline code execution_ as in VSCode. On
+the other hand, the language server is not required to make this work.
 
-1.  Open a .jl file in the editor.
+1. Open a `.jl` file in the editor.
 
-2.  From the Command Palette, run `open in terminal`. This opens a new terminal in the
-    worktree root (where the Project.toml lives). You can also right-click in the editor and
-    use the context menu or press ``ctrl-shift-` `` as defined in the json example below.
+2. From the command palette, run `open in terminal`. This opens a new
+   terminal in the worktree root (where the `Project.toml` lives). You can
+   also right-click in the editor and use the context menu or press
+   ``ctrl-shift-` `` as defined in the JSON example below.
 
-3.  In the terminal, start the REPL with `julia --project`.
+3. In the terminal, start the REPL with `julia --project`.
 
-4.  Now it's time to select some code in the editor, copy it to the clipboard, paste it into
-    the terminal, execute it, and go back to the editor. To make that less tedious, add one
-    or more of the following key bindings. Change the `ctrl-shift-f10/11/12` combinations
-    to your liking.
+4. Now it's time to select some code in the editor, copy it to the
+   clipboard, paste it into the terminal, execute it, and go back to the
+   editor. To make that less tedious, add one or more of the following key
+   bindings. Change the `ctrl-shift-f10/11/12` combinations to your liking.
 
-    Note: interacting with the terminal requires to send keystrokes. In the examples,
-    `cmd-v` is used to paste code. Please adjust this binding for your operating system.
+   Note: interacting with the terminal requires sending keystrokes. In the
+   examples, `cmd-v` is used to paste code. Please adjust this binding for
+   your operating system.
 
-    > `~/.config/zed/keymap.json` (can be opened via ``zed: open keymap file``)
+   > `~/.config/zed/keymap.json` (can be opened via `zed: open keymap file`)
 
-    ```jsonc
-    [
-      {
-        // Set the focus back to the editor without hiding the terminal.
-        // This is an auxiliary binding used by other bindings.
-        "context": "Terminal",
-        "bindings": { "ctrl-shift-`": "terminal_panel::ToggleFocus" }
-      },
-      {
-        "context": "Editor && mode == full",
-        "bindings": {
-          // Open a new terminal and change to the worktree root directory.
-          "ctrl-shift-`": "workspace::OpenInTerminal",
+   ```jsonc
+   [
+     {
+       // Set the focus back to the editor without hiding the terminal.
+       // This is an auxiliary binding used by other bindings.
+       "context": "Terminal",
+       "bindings": { "ctrl-shift-`": "terminal_panel::ToggleFocus" },
+     },
+     {
+       "context": "Editor && mode == full",
+       "bindings": {
+         // Open a new terminal and change to the worktree root directory.
+         "ctrl-shift-`": "workspace::OpenInTerminal",
 
-          // Execute the whole line the cursor is on and move the cursor to the next line.
-          // Invoke this binding repeately to run line by line.
-          "ctrl-shift-f10": [
-            "action::Sequence",
-            [
-              "editor::SelectLine",
-              "editor::Copy",
-              "editor::MoveRight",
-              ["workspace::SendKeystrokes", "ctrl-` cmd-v ctrl-shift-`"]
-            ]
-          ],
+         // Execute the whole line the cursor is on and move the cursor to
+         // the next line. Invoke this binding repeatedly to run line by
+         // line.
+         "ctrl-shift-f10": [
+           "action::Sequence",
+           [
+             "editor::SelectLine",
+             "editor::Copy",
+             "editor::MoveRight",
+             ["workspace::SendKeystrokes", "ctrl-` cmd-v ctrl-shift-`"],
+           ],
+         ],
 
-          // Execute the enclosing top level block e.g., a function definition.
-          // Note the additional keystroke "enter" to actually execute the code.
-          "ctrl-shift-f11": [
-            "action::Sequence",
-            [
-              "editor::SelectEnclosingSymbol",
-              "editor::CopyAndTrim",
-              ["workspace::SendKeystrokes", "ctrl-` cmd-v enter ctrl-shift-`"]
-            ]
-          ],
+         // Execute the enclosing top level block e.g., a function
+         // definition. Note the additional keystroke "enter" to actually
+         // execute the code.
+         "ctrl-shift-f11": [
+           "action::Sequence",
+           [
+             "editor::SelectEnclosingSymbol",
+             "editor::CopyAndTrim",
+             ["workspace::SendKeystrokes", "ctrl-` cmd-v enter ctrl-shift-`"],
+           ],
+         ],
 
-          // Execute the paragraph (a block surrounded by blank lines).
-          "ctrl-shift-f12": [
-            "action::Sequence",
-            [
-              "editor::MoveToStartOfParagraph",
-              "editor::SelectToEndOfParagraph",
-              "editor::Copy",
-              ["workspace::SendKeystrokes", "ctrl-` cmd-v ctrl-shift-`"]
-            ]
-          ]
-        }
-      }
-    ]
-    ```
+         // Execute the paragraph (a block surrounded by blank lines).
+         "ctrl-shift-f12": [
+           "action::Sequence",
+           [
+             "editor::MoveToStartOfParagraph",
+             "editor::SelectToEndOfParagraph",
+             "editor::Copy",
+             ["workspace::SendKeystrokes", "ctrl-` cmd-v ctrl-shift-`"],
+           ],
+         ],
+       },
+     },
+   ]
+   ```
 
 ## Plot side pane
 
-For plot support in Zed, we recommend using [ZedPlotPane.jl](https://github.com/takuizum/ZedPlotPane.jl).
+For plot support in Zed, we recommend using
+[ZedPlotPane.jl](https://github.com/takuizum/ZedPlotPane.jl).
 
 To install it, run the following in your Julia REPL:
 
@@ -482,13 +562,18 @@ using Pkg
 Pkg.add("ZedPlotPane")
 ```
 
-To enable the plot pane, load `ZedPlotPane` (`using ZedPlotPane`) in your Julia REPL **before loading `Plots` or any other plotting package**.
+To enable the plot pane, load `ZedPlotPane` (`using ZedPlotPane`) in your
+Julia REPL **before loading `Plots` or any other plotting package**.
 
-The first plot will create and open `~/.cache/zed-julia/current-plot.png`. Drag that tab into a side pane; subsequent plots will update there automatically.
+The first plot will create and open `~/.cache/zed-julia/current-plot.png`.
+Drag that tab into a side pane; subsequent plots will update there
+automatically.
 
-If you close the plot pane, you can re-open it by running `ZedPlotPane._open_viewer()` in the REPL.
+If you close the plot pane, you can re-open it by running
+`ZedPlotPane._open_viewer()` in the REPL.
 
-For more information on how to use it, please refer to the [ZedPlotPane.jl documentation](https://github.com/takuizum/ZedPlotPane.jl).
+For more information on how to use it, please refer to the
+[ZedPlotPane.jl documentation](https://github.com/takuizum/ZedPlotPane.jl).
 
 ## Using Zed from the Julia REPL
 
@@ -516,7 +601,7 @@ for instance:
 
 > `~/.config/zed/settings.json`
 
-```json
+```jsonc
 {
   "theme_overrides": {
     "One Dark": {
@@ -538,7 +623,7 @@ See [Syntax Highlighting and Themes](https://zed.dev/docs/configuring-languages#
 and [Tree-sitter Queries](https://zed.dev/docs/extensions/languages#tree-sitter-queries)
 for further details.
 
-Syntax tokens are called *captures* in tree-sitter jargon.
+Syntax tokens are called _captures_ in tree-sitter jargon.
 The following table lists all captures provided by zed-julia. Some captures have
 default values (defined in [Zed's color themes](https://github.com/zed-industries/zed/blob/main/assets/themes/))
 and the other captures fall back to one of the defaults.
@@ -546,41 +631,41 @@ Depending on your color theme, some captures may be set to the editor's
 foreground color or to a very similar one. In this case, try to assign a
 different color to improve the contrast.
 
-| Capture | Is there a default value? | Note/Example |
-| ------- | ------------------------- | ------------ |
-| boolean | yes |
-| comment | yes | line or block comment |
-| comment.doc | yes | docstring |
-| constant | yes |
-| constant.builtin | no, falls back to constant | core julia built-in |
-| function.builtin | no, falls back to function | core julia built-in |
-| function.call | no, falls back to function | name of the called function |
-| function.definition | no, falls back to function | name of the defined function |
-| function.macro | no, falls back to function | name of the macro |
-| keyword | yes |
-| keyword.conditional | no, falls back to keyword | `if`, `else` |
-| keyword.conditional.ternary | no, falls back to keyword | `? :` |
-| keyword.exception | no, falls back to keyword | `try`, `catch` |
-| keyword.function | no, falls back to keyword | `function`, `do`, short function definition: `=` |
-| keyword.import | no, falls back to keyword | `im/export`, `using`, module definition |
-| keyword.operator | no, falls back to keyword | `in`, `isa`, `where` |
-| keyword.repeat | no, falls back to keyword | `for`, `while` |
-| keyword.return | no, falls back to keyword | `return` |
-| keyword.type | no, falls back to keyword | struct or type definition |
-| label | yes | label name for `@label`, `@goto` |
-| number | yes |
-| number.float | no, falls back to number |
-| operator | yes |
-| punctuation.bracket | yes | `()`, `[]`, `{}` |
-| punctuation.delimiter | yes | `,`, `;`, `::` |
-| punctuation.special | yes | `.`, `...`, string interpolation `$` |
-| string | yes |
-| string.escape | yes | escape sequence |
-| string.special | yes | command literal |
-| string.special.symbol | yes | quote expression |
-| type | yes |
-| type.builtin | no, falls back to type | core julia built-in |
-| type.definition | no, falls back to type |
-| variable | yes |
-| variable.builtin | no, falls back to variable | core julia built-in: `begin` and `end` in indices |
-| variable.member | no, falls back to variable | example: in `foo.bar`, the member is `bar` |
+| Capture                     | Is there a default value?  | Note/Example                                      |
+| --------------------------- | -------------------------- | ------------------------------------------------- |
+| boolean                     | yes                        |
+| comment                     | yes                        | line or block comment                             |
+| comment.doc                 | yes                        | docstring                                         |
+| constant                    | yes                        |
+| constant.builtin            | no, falls back to constant | core julia built-in                               |
+| function.builtin            | no, falls back to function | core julia built-in                               |
+| function.call               | no, falls back to function | name of the called function                       |
+| function.definition         | no, falls back to function | name of the defined function                      |
+| function.macro              | no, falls back to function | name of the macro                                 |
+| keyword                     | yes                        |
+| keyword.conditional         | no, falls back to keyword  | `if`, `else`                                      |
+| keyword.conditional.ternary | no, falls back to keyword  | `? :`                                             |
+| keyword.exception           | no, falls back to keyword  | `try`, `catch`                                    |
+| keyword.function            | no, falls back to keyword  | `function`, `do`, short function definition: `=`  |
+| keyword.import              | no, falls back to keyword  | `im/export`, `using`, module definition           |
+| keyword.operator            | no, falls back to keyword  | `in`, `isa`, `where`                              |
+| keyword.repeat              | no, falls back to keyword  | `for`, `while`                                    |
+| keyword.return              | no, falls back to keyword  | `return`                                          |
+| keyword.type                | no, falls back to keyword  | struct or type definition                         |
+| label                       | yes                        | label name for `@label`, `@goto`                  |
+| number                      | yes                        |
+| number.float                | no, falls back to number   |
+| operator                    | yes                        |
+| punctuation.bracket         | yes                        | `()`, `[]`, `{}`                                  |
+| punctuation.delimiter       | yes                        | `,`, `;`, `::`                                    |
+| punctuation.special         | yes                        | `.`, `...`, string interpolation `$`              |
+| string                      | yes                        |
+| string.escape               | yes                        | escape sequence                                   |
+| string.special              | yes                        | command literal                                   |
+| string.special.symbol       | yes                        | quote expression                                  |
+| type                        | yes                        |
+| type.builtin                | no, falls back to type     | core julia built-in                               |
+| type.definition             | no, falls back to type     |
+| variable                    | yes                        |
+| variable.builtin            | no, falls back to variable | core julia built-in: `begin` and `end` in indices |
+| variable.member             | no, falls back to variable | example: in `foo.bar`, the member is `bar`        |
