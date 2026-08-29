@@ -10,10 +10,17 @@ authors = [
 ]
 repository = "https://github.com/JuliaEditorSupport/zed-julia"
 
+# `command` stays a wildcard because the Julia executable resolves to a
+# user-configurable absolute path at runtime.
 [[capabilities]]
 kind = "process:exec"
 command = "*"
-args = ["**"]
+args = ["--startup-file=no", "--history-file=no", "-e", "*"]
+
+[[capabilities]]
+kind = "process:exec"
+command = "*"
+args = ["--startup-file=no", "--history-file=no", "--threads=auto", "**"]
 
 [grammars.julia]
 repository = "https://github.com/tree-sitter/tree-sitter-julia"

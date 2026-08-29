@@ -663,12 +663,32 @@ end
         Self::successful_output(output, "The Julia version check")
     }
 
+    // The version probe is anchored by the default flags so its invocation
+    // stays within the `process:exec` capability patterns declared in
+    // `extension.toml`, while the configured julia flags still take effect:
+    // they come after the defaults, and julia lets later flags override
+    // earlier ones.
+    fn probe_args(base_args: &[String]) -> Vec<String> {
+        let julia_flags = match Self::module_entry_position(base_args) {
+            Some(position) => &base_args[..position],
+            None => &base_args[..0],
+        };
+        let mut args = vec![
+            "--startup-file=no".to_string(),
+            "--history-file=no".to_string(),
+            "--threads=auto".to_string(),
+        ];
+        args.extend(julia_flags.iter().cloned());
+        args.extend(["-m", "JETLS", "version"].map(String::from));
+        args
+    }
+
     fn run_version_command(
         julia_bin: &str,
         base_args: &[String],
         env: &[(String, String)],
     ) -> Result<String> {
-        let args = Self::args_for_subcommand(base_args, "version")?;
+        let args = Self::probe_args(base_args);
         let output = Self::run_command(julia_bin, args, env, "the JETLS version check")?;
         Self::successful_output(output, "The JETLS version check")
     }
@@ -1009,6 +1029,35 @@ mod tests {
         assert!(validate(&["--threads=1", "--", "serve"]).is_err());
         // The entry point must come before `serve`.
         assert!(validate(&["serve", "-m", "JETLS"]).is_err());
+    }
+
+    #[test]
+    fn anchors_the_version_probe_with_the_default_flags() {
+        assert_eq!(
+            JuliaExtension::probe_args(&strings(&["--project=/dev/JETLS", "-m", "JETLS", "serve"])),
+            strings(&[
+                "--startup-file=no",
+                "--history-file=no",
+                "--threads=auto",
+                "--project=/dev/JETLS",
+                "-m",
+                "JETLS",
+                "version"
+            ])
+        );
+        // Configured flags come after the defaults so they override them.
+        assert_eq!(
+            JuliaExtension::probe_args(&strings(&["--threads=1", "-m", "JETLS", "serve"])),
+            strings(&[
+                "--startup-file=no",
+                "--history-file=no",
+                "--threads=auto",
+                "--threads=1",
+                "-m",
+                "JETLS",
+                "version"
+            ])
+        );
     }
 
     #[test]
