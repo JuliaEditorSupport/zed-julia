@@ -167,6 +167,12 @@ installation does not require network access. JETLS may still access the network
 to instantiate a workspace package environment unless
 `full_analysis.auto_instantiate` is disabled.
 
+The server launches with the private depot first in `JULIA_DEPOT_PATH` and
+the user depot chain (`~/.julia`, or `JULIA_DEPOT_PATH` if set in the shell
+or `binary.env`) after it: everything the managed installation writes stays
+private, while packages and precompile caches already installed in the user
+depots are reused when analyzing workspace dependencies.
+
 The initial installation may take several minutes while Julia installs and
 precompiles JETLS.
 
