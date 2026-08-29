@@ -23,3 +23,14 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Run tests
         run: cargo test --locked
+
+  check-julia-bounds:
+    name: check julia bounds
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Check the julia bounds against the pinned release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/check-julia-bounds.sh
