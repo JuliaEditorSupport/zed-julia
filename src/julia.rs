@@ -13,7 +13,7 @@ const JETLS_REPOSITORY: &str = "https://github.com/aviatesk/JETLS.jl";
 // Bump this dated tag together with the zed-julia extension release, and keep
 // the Julia version bounds below in sync with the `julia` compat declared in
 // the pinned revision's Project.toml.
-const JETLS_REVISION: &str = "2026-08-07";
+const JETLS_REVISION: &str = "2026-08-29";
 // Supported Julia versions, inclusive: the upper bound allows any patch
 // release of that minor version (`1.13` allows any Julia 1.13.x).
 const JULIA_VERSION_LOWER_BOUND: &str = "1.12.2";
@@ -340,13 +340,20 @@ end
             .join(".")
     }
 
+    // Parses the `jetls version <revision>, julia version <version>` output
+    // used by JETLS releases since 2026-08-23.
     fn is_pinned_jetls_version(version_output: &str) -> bool {
-        version_output.lines().any(|line| {
-            let mut words = line.split_whitespace();
-            matches!(words.next(), Some("JETLS"))
-                && matches!(words.next(), Some("version"))
-                && matches!(words.next(), Some(version) if version == JETLS_REVISION)
-        })
+        let mut versions = version_output
+            .lines()
+            .filter_map(|line| line.trim().strip_prefix("jetls version "));
+        let (Some(rest), None) = (versions.next(), versions.next()) else {
+            return false;
+        };
+        matches!(
+            rest.split(|character: char| character == ',' || character.is_whitespace())
+                .next(),
+            Some(version) if version == JETLS_REVISION
+        )
     }
 
     fn managed_installation_needs_update(installed_version: Option<&Result<String>>) -> bool {
@@ -616,15 +623,22 @@ mod tests {
 
     #[test]
     fn recognizes_only_the_pinned_jetls_version() {
-        assert!(JuliaExtension::is_pinned_jetls_version(
-            "JETLS version 2026-08-07\n"
-        ));
-        assert!(JuliaExtension::is_pinned_jetls_version(
-            "JETLS version 2026-08-07 on Julia 1.12.6\n"
-        ));
+        assert!(JuliaExtension::is_pinned_jetls_version(&format!(
+            "jetls version {JETLS_REVISION}, julia version 1.12.6\n"
+        )));
+        assert!(JuliaExtension::is_pinned_jetls_version(&format!(
+            "jetls version {JETLS_REVISION}\n"
+        )));
         assert!(!JuliaExtension::is_pinned_jetls_version(
-            "JETLS version 2026-08-01 on Julia 1.12.6\n"
+            "jetls version 2026-08-01, julia version 1.12.6\n"
         ));
+        // The pre-2026-08-23 output format signals a stale installation.
+        assert!(!JuliaExtension::is_pinned_jetls_version(&format!(
+            "JETLS version {JETLS_REVISION} on Julia 1.12.6\n"
+        )));
+        assert!(!JuliaExtension::is_pinned_jetls_version(&format!(
+            "jetls version {JETLS_REVISION}\njetls version {JETLS_REVISION}\n"
+        )));
         assert!(!JuliaExtension::is_pinned_jetls_version(
             "unexpected output\n"
         ));
@@ -640,11 +654,13 @@ mod tests {
         )));
         // Installed, but at a different pin.
         assert!(JuliaExtension::managed_installation_needs_update(Some(
-            &Ok("JETLS version 2026-08-01 on Julia 1.12.6\n".to_string())
+            &Ok("jetls version 2026-08-01, julia version 1.12.6\n".to_string())
         )));
         // Installed at the pinned version.
         assert!(!JuliaExtension::managed_installation_needs_update(Some(
-            &Ok(format!("JETLS version {JETLS_REVISION} on Julia 1.12.6\n"))
+            &Ok(format!(
+                "jetls version {JETLS_REVISION}, julia version 1.12.6\n"
+            ))
         )));
     }
 
