@@ -169,47 +169,57 @@ impl JuliaExtension {
             .unwrap_or_default()
     }
 
-    fn command_env(settings: &LspSettings, worktree: &zed::Worktree) -> Vec<(String, String)> {
+    fn command_env(
+        settings: &LspSettings,
+        worktree: &zed::Worktree,
+        platform: zed::Os,
+    ) -> Vec<(String, String)> {
         let mut env = worktree.shell_env();
         for (key, value) in Self::settings_env(settings) {
-            Self::set_env_value(&mut env, &key, value);
+            Self::set_env_value(&mut env, &key, value, platform);
         }
         env
     }
 
-    fn env_value<'a>(env: &'a [(String, String)], name: &str) -> Option<&'a str> {
-        env.iter()
-            .rev()
-            .find_map(|(key, value)| (key == name).then_some(value.as_str()))
+    // Windows environment variable names are case-insensitive, so lookups and
+    // replacements must not miss (or duplicate) keys differing only in case.
+    fn env_key_matches(key: &str, name: &str, platform: zed::Os) -> bool {
+        if matches!(platform, zed::Os::Windows) {
+            key.eq_ignore_ascii_case(name)
+        } else {
+            key == name
+        }
     }
 
-    fn set_env_value(env: &mut Vec<(String, String)>, name: &str, value: String) {
-        env.retain(|(key, _)| key != name);
+    fn env_value<'a>(
+        env: &'a [(String, String)],
+        name: &str,
+        platform: zed::Os,
+    ) -> Option<&'a str> {
+        env.iter().rev().find_map(|(key, value)| {
+            Self::env_key_matches(key, name, platform).then_some(value.as_str())
+        })
+    }
+
+    fn set_env_value(
+        env: &mut Vec<(String, String)>,
+        name: &str,
+        value: String,
+        platform: zed::Os,
+    ) {
+        env.retain(|(key, _)| !Self::env_key_matches(key, name, platform));
         env.push((name.to_string(), value));
     }
 
     fn prepend_path_directory(env: &mut Vec<(String, String)>, directory: &str, platform: zed::Os) {
-        let is_windows = matches!(platform, zed::Os::Windows);
-        let separator = if is_windows { ';' } else { ':' };
-        let is_path_key = |key: &str| {
-            if is_windows {
-                key.eq_ignore_ascii_case("PATH")
-            } else {
-                key == "PATH"
-            }
-        };
-        let path = match env
-            .iter()
-            .rev()
-            .find_map(|(key, value)| is_path_key(key).then_some(value.as_str()))
-        {
+        let path = match Self::env_value(env, "PATH", platform) {
             Some(existing_path) if !existing_path.is_empty() => {
+                let separator = Self::path_list_separator(platform);
                 format!("{directory}{separator}{existing_path}")
             }
             _ => directory.to_string(),
         };
-        env.retain(|(key, _)| !is_path_key(key));
-        env.push(("PATH".to_string(), path));
+        Self::set_env_value(env, "PATH", path, platform);
     }
 
     fn resolve_command(
@@ -231,9 +241,10 @@ impl JuliaExtension {
     fn resolve_julia_bin(
         settings_env: &[(String, String)],
         worktree: &zed::Worktree,
+        platform: zed::Os,
     ) -> Result<String> {
         let configured_path =
-            Self::env_value(settings_env, "JULIA_APPS_JULIA_CMD").unwrap_or("julia");
+            Self::env_value(settings_env, "JULIA_APPS_JULIA_CMD", platform).unwrap_or("julia");
         Self::resolve_command(configured_path, "Julia", worktree)
     }
 
@@ -257,7 +268,7 @@ impl JuliaExtension {
             .into_owned())
     }
 
-    fn managed_jetls_bin(depot_path: &str, platform: zed::Os) -> String {
+    fn managed_jetls_shim(depot_path: &str, platform: zed::Os) -> String {
         Path::new(depot_path)
             .join("bin")
             .join(if matches!(platform, zed::Os::Windows) {
@@ -267,6 +278,86 @@ impl JuliaExtension {
             })
             .to_string_lossy()
             .into_owned()
+    }
+
+    fn path_list_separator(platform: zed::Os) -> char {
+        if matches!(platform, zed::Os::Windows) {
+            ';'
+        } else {
+            ':'
+        }
+    }
+
+    // `JULIA_DEPOT_PATH` for the maintenance commands (install, gc): writes go
+    // to the managed depot, the trailing empty entry appends the bundled system
+    // depots so stdlib caches are reused, and the user depot stays out of the
+    // chain so the managed depot remains self-contained.
+    fn maintenance_depot_chain(depot_path: &str, platform: zed::Os) -> String {
+        format!("{depot_path}{}", Self::path_list_separator(platform))
+    }
+
+    fn managed_environment(depot_path: &str) -> String {
+        Path::new(depot_path)
+            .join("environments")
+            .join("apps")
+            .join("JETLS")
+            .to_string_lossy()
+            .into_owned()
+    }
+
+    fn server_depot_chain(env: &[(String, String)], depot_path: &str, platform: zed::Os) -> String {
+        let separator = Self::path_list_separator(platform);
+        if let Some(user_chain) =
+            Self::env_value(env, "JULIA_DEPOT_PATH", platform).filter(|chain| !chain.is_empty())
+        {
+            return format!("{depot_path}{separator}{user_chain}");
+        }
+        let home_key = if matches!(platform, zed::Os::Windows) {
+            "USERPROFILE"
+        } else {
+            "HOME"
+        };
+        match Self::env_value(env, home_key, platform).filter(|home| !home.is_empty()) {
+            // The trailing empty entry appends the bundled system depots.
+            Some(home) => format!("{depot_path}{separator}{home}/.julia{separator}"),
+            None => format!("{depot_path}{separator}"),
+        }
+    }
+
+    // The server launches as `julia -m JETLS` against the managed app
+    // environment with an explicit depot chain: every write stays in the
+    // managed depot (it comes first), while packages and precompile caches
+    // already present in the user's own chain stay readable and reused for
+    // analyzing workspace dependencies.
+    fn server_launch_env(
+        mut env: Vec<(String, String)>,
+        depot_path: &str,
+        platform: zed::Os,
+    ) -> Vec<(String, String)> {
+        let depot_chain = Self::server_depot_chain(&env, depot_path, platform);
+        Self::set_env_value(&mut env, "JULIA_DEPOT_PATH", depot_chain, platform);
+        let load_path = Self::managed_environment(depot_path);
+        Self::set_env_value(&mut env, "JULIA_LOAD_PATH", load_path, platform);
+        env
+    }
+
+    // Mirror the shim's argument protocol: arguments before a `--` separator go
+    // to `julia` itself, the rest to the JETLS app.
+    fn julia_launch_args(shim_args: &[String]) -> Vec<String> {
+        let (julia_args, app_args) = match shim_args.iter().position(|arg| arg == "--") {
+            Some(separator) => (&shim_args[..separator], &shim_args[separator + 1..]),
+            None => (&shim_args[..0], shim_args),
+        };
+        let mut args = vec![
+            "--startup-file=no".to_string(),
+            "--history-file=no".to_string(),
+            "--threads=auto".to_string(),
+        ];
+        args.extend(julia_args.iter().cloned());
+        args.push("-m".to_string());
+        args.push("JETLS".to_string());
+        args.extend(app_args.iter().cloned());
+        args
     }
 
     fn run_command(
@@ -322,12 +413,13 @@ end
     }
 
     fn run_version_command(
-        resolved_bin: &str,
+        julia_bin: &str,
         base_args: &[String],
         env: &[(String, String)],
     ) -> Result<String> {
-        let args = Self::args_for_subcommand(base_args, "version")?;
-        let output = Self::run_command(resolved_bin, args, env, "the JETLS version check")?;
+        let subcommand_args = Self::args_for_subcommand(base_args, "version")?;
+        let args = Self::julia_launch_args(&subcommand_args);
+        let output = Self::run_command(julia_bin, args, env, "the JETLS version check")?;
         Self::successful_output(output, "The JETLS version check")
     }
 
@@ -385,7 +477,8 @@ end
         let install_script =
             format!("using Pkg; Pkg.Apps.add(; url={JETLS_REPOSITORY:?}, rev={JETLS_REVISION:?})");
         let mut install_env = env.to_vec();
-        Self::set_env_value(&mut install_env, "JULIA_DEPOT_PATH", depot_path.to_string());
+        let depot_chain = Self::maintenance_depot_chain(depot_path, platform);
+        Self::set_env_value(&mut install_env, "JULIA_DEPOT_PATH", depot_chain, platform);
         let managed_bin_dir = Path::new(depot_path)
             .join("bin")
             .to_string_lossy()
@@ -409,6 +502,7 @@ end
     fn collect_managed_garbage(
         julia_bin: &str,
         depot_path: &str,
+        platform: zed::Os,
         env: &[(String, String)],
     ) -> Result<()> {
         // The depot only needs to serve the pinned release, so reclaim
@@ -416,7 +510,8 @@ end
         // Pkg's default 7-day grace period.
         const GC_SCRIPT: &str = "import Pkg, Dates; Pkg.gc(; collect_delay=Dates.Day(0))";
         let mut gc_env = env.to_vec();
-        Self::set_env_value(&mut gc_env, "JULIA_DEPOT_PATH", depot_path.to_string());
+        let depot_chain = Self::maintenance_depot_chain(depot_path, platform);
+        Self::set_env_value(&mut gc_env, "JULIA_DEPOT_PATH", depot_chain);
         let output = Self::run_command(
             julia_bin,
             vec![
@@ -439,7 +534,7 @@ end
         server_id: &LanguageServerId,
         platform: zed::Os,
     ) -> Result<zed::Command> {
-        let julia_bin = Self::resolve_julia_bin(&command_env, worktree)?;
+        let julia_bin = Self::resolve_julia_bin(&command_env, worktree, platform)?;
         let julia_version = Self::verify_julia_version(&julia_bin, &command_env)?;
         // Key the depot by the Julia major.minor version only: the app-env
         // manifest stays valid across patch releases, and `compiled/` already
@@ -448,17 +543,20 @@ end
         let julia_runtime = format!("{julia_bin}\n{}", Self::julia_minor_version(&julia_version));
 
         let depot_path = Self::managed_depot_path(&julia_runtime)?;
-        let jetls_bin = Self::managed_jetls_bin(&depot_path, platform);
+        // The Pkg.Apps shim pins `JULIA_DEPOT_PATH` to the managed depot only,
+        // hiding the user depot's packages and precompile caches, so launches
+        // bypass it via `julia -m JETLS`; the shim file only marks a completed
+        // installation.
+        let jetls_shim = Self::managed_jetls_shim(&depot_path, platform);
         let args = Self::resolve_binary_args(settings);
         Self::args_for_subcommand(&args, "version")?;
-        let mut launch_env = command_env;
-        Self::set_env_value(&mut launch_env, "JULIA_APPS_JULIA_CMD", julia_bin.clone());
+        let launch_env = Self::server_launch_env(command_env.clone(), &depot_path, platform);
 
         // Failures below implicate the state of the managed depot, so extend
         // them with a manual recovery hint pointing at its location.
         (|| -> Result<()> {
-            let installed_version = if fs::metadata(&jetls_bin).is_ok_and(|stat| stat.is_file()) {
-                Some(Self::run_version_command(&jetls_bin, &args, &launch_env))
+            let installed_version = if fs::metadata(&jetls_shim).is_ok_and(|stat| stat.is_file()) {
+                Some(Self::run_version_command(&julia_bin, &args, &launch_env))
             } else {
                 None
             };
@@ -472,7 +570,7 @@ end
                     &julia_bin,
                     &depot_path,
                     platform,
-                    &launch_env,
+                    &command_env,
                 ) {
                     let error = if let Some(Err(verification_error)) = installed_version.as_ref() {
                         format!(
@@ -484,7 +582,7 @@ end
                     return Err(error);
                 }
 
-                let installed_version = Self::run_version_command(&jetls_bin, &args, &launch_env)?;
+                let installed_version = Self::run_version_command(&julia_bin, &args, &launch_env)?;
                 if !Self::is_pinned_jetls_version(&installed_version) {
                     return Err(format!(
                         "Managed JETLS installation returned an unexpected version. Expected {JETLS_REVISION}, got:\n{installed_version}"
@@ -494,7 +592,7 @@ end
                 // Garbage collection is housekeeping: the pinned release is already verified above,
                 // so do not fail the launch over it.
                 if let Err(error) =
-                    Self::collect_managed_garbage(&julia_bin, &depot_path, &launch_env)
+                    Self::collect_managed_garbage(&julia_bin, &depot_path, platform, &command_env)
                 {
                     eprintln!("Failed to garbage-collect the managed JETLS depot: {error}");
                 }
@@ -508,8 +606,8 @@ end
         })?;
 
         Ok(zed::Command {
-            command: jetls_bin,
-            args,
+            command: julia_bin,
+            args: Self::julia_launch_args(&args),
             env: launch_env,
         })
     }
@@ -528,8 +626,8 @@ impl zed::Extension for JuliaExtension {
         // Zed handles `binary.path` overrides before invoking the extension, so this
         // method only needs to construct commands for the managed installation.
         let settings = LspSettings::for_worktree(server_id.as_ref(), worktree)?;
-        let command_env = Self::command_env(&settings, worktree);
         let (platform, _) = zed::current_platform();
+        let command_env = Self::command_env(&settings, worktree, platform);
         zed::set_language_server_installation_status(
             server_id,
             &zed::LanguageServerInstallationStatus::CheckingForUpdate,
@@ -622,6 +720,97 @@ mod tests {
     }
 
     #[test]
+    fn launches_julia_directly_with_the_shim_argument_protocol() {
+        // Without a `--` separator, every argument goes to the JETLS app.
+        assert_eq!(
+            JuliaExtension::julia_launch_args(&strings(&["serve"])),
+            strings(&[
+                "--startup-file=no",
+                "--history-file=no",
+                "--threads=auto",
+                "-m",
+                "JETLS",
+                "serve"
+            ])
+        );
+        // Arguments before `--` go to `julia` itself, after the defaults so
+        // they can override them.
+        assert_eq!(
+            JuliaExtension::julia_launch_args(&strings(&["--threads=1", "--", "serve"])),
+            strings(&[
+                "--startup-file=no",
+                "--history-file=no",
+                "--threads=auto",
+                "--threads=1",
+                "-m",
+                "JETLS",
+                "serve"
+            ])
+        );
+    }
+
+    #[test]
+    fn chains_the_managed_depot_before_the_user_depots() {
+        // An explicit user chain is preserved after the managed depot.
+        let env = vec![("JULIA_DEPOT_PATH".to_string(), "/custom/depot:".to_string())];
+        assert_eq!(
+            JuliaExtension::server_depot_chain(&env, "/managed", zed::Os::Mac),
+            "/managed:/custom/depot:"
+        );
+
+        let env = vec![("JULIA_DEPOT_PATH".to_string(), r"C:\custom".to_string())];
+        assert_eq!(
+            JuliaExtension::server_depot_chain(&env, r"C:\managed", zed::Os::Windows),
+            r"C:\managed;C:\custom"
+        );
+
+        // Windows environment keys match case-insensitively.
+        let env = vec![("julia_depot_path".to_string(), r"C:\custom".to_string())];
+        assert_eq!(
+            JuliaExtension::server_depot_chain(&env, r"C:\managed", zed::Os::Windows),
+            r"C:\managed;C:\custom"
+        );
+
+        // Otherwise the default user depot is chained, with a trailing empty
+        // entry appending the bundled system depots.
+        let env = vec![("HOME".to_string(), "/Users/me".to_string())];
+        assert_eq!(
+            JuliaExtension::server_depot_chain(&env, "/managed", zed::Os::Mac),
+            "/managed:/Users/me/.julia:"
+        );
+
+        // An empty user chain means the Julia default chain, not "no depot".
+        let env = vec![
+            ("JULIA_DEPOT_PATH".to_string(), String::new()),
+            ("HOME".to_string(), "/Users/me".to_string()),
+        ];
+        assert_eq!(
+            JuliaExtension::server_depot_chain(&env, "/managed", zed::Os::Mac),
+            "/managed:/Users/me/.julia:"
+        );
+
+        // Without a resolvable home, fall back to the bundled depots only.
+        assert_eq!(
+            JuliaExtension::server_depot_chain(&[], "/managed", zed::Os::Mac),
+            "/managed:"
+        );
+    }
+
+    #[test]
+    fn pins_the_depot_chain_and_load_path_for_the_server_launch() {
+        let env = vec![("HOME".to_string(), "/Users/me".to_string())];
+        let launch_env = JuliaExtension::server_launch_env(env, "/managed", zed::Os::Mac);
+        assert_eq!(
+            JuliaExtension::env_value(&launch_env, "JULIA_DEPOT_PATH", zed::Os::Mac),
+            Some("/managed:/Users/me/.julia:")
+        );
+        assert_eq!(
+            JuliaExtension::env_value(&launch_env, "JULIA_LOAD_PATH", zed::Os::Mac),
+            Some("/managed/environments/apps/JETLS")
+        );
+    }
+
+    #[test]
     fn recognizes_only_the_pinned_jetls_version() {
         assert!(JuliaExtension::is_pinned_jetls_version(&format!(
             "jetls version {JETLS_REVISION}, julia version 1.12.6\n"
@@ -670,10 +859,15 @@ mod tests {
             ("OTHER".to_string(), "value".to_string()),
             ("JULIA_DEPOT_PATH".to_string(), "old".to_string()),
         ];
-        JuliaExtension::set_env_value(&mut env, "JULIA_DEPOT_PATH", "managed".to_string());
+        JuliaExtension::set_env_value(
+            &mut env,
+            "JULIA_DEPOT_PATH",
+            "managed".to_string(),
+            zed::Os::Mac,
+        );
 
         assert_eq!(
-            JuliaExtension::env_value(&env, "JULIA_DEPOT_PATH"),
+            JuliaExtension::env_value(&env, "JULIA_DEPOT_PATH", zed::Os::Mac),
             Some("managed")
         );
         assert_eq!(
@@ -681,6 +875,32 @@ mod tests {
                 .filter(|(key, _)| key == "JULIA_DEPOT_PATH")
                 .count(),
             1
+        );
+    }
+
+    #[test]
+    fn matches_environment_keys_case_insensitively_on_windows() {
+        let mut env = vec![("Julia_Depot_Path".to_string(), "old".to_string())];
+        assert_eq!(
+            JuliaExtension::env_value(&env, "JULIA_DEPOT_PATH", zed::Os::Windows),
+            Some("old")
+        );
+        // Elsewhere, differently cased keys are distinct variables.
+        assert_eq!(
+            JuliaExtension::env_value(&env, "JULIA_DEPOT_PATH", zed::Os::Mac),
+            None
+        );
+
+        // A replacement must not leave a differently cased duplicate behind.
+        JuliaExtension::set_env_value(
+            &mut env,
+            "JULIA_DEPOT_PATH",
+            "managed".to_string(),
+            zed::Os::Windows,
+        );
+        assert_eq!(
+            env,
+            vec![("JULIA_DEPOT_PATH".to_string(), "managed".to_string())]
         );
     }
 
