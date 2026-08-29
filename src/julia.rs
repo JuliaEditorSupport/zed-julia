@@ -267,22 +267,29 @@ impl JuliaExtension {
         Self::resolve_command(configured_path, "Julia", worktree)
     }
 
-    fn runtime_cache_key(julia_runtime: &str) -> String {
-        // Use a fixed hash so cache paths remain stable across extension builds.
+    // The key spells out the Julia minor version and hashes the executable
+    // path: different installations of the same Julia version are different
+    // builds, whose precompile caches must not share a depot, and the path
+    // itself cannot be embedded in a directory name safely. The patch version
+    // stays out deliberately: package resolution is stable within a minor, so
+    // a patch update only re-precompiles within the existing generation
+    // instead of reinstalling into a fresh container. FNV-1a keeps the hash
+    // stable across extension builds.
+    fn runtime_key(julia_bin: &str, julia_minor: &str) -> String {
         let mut hash = 0xcbf29ce484222325_u64;
-        for byte in julia_runtime.bytes() {
+        for byte in julia_bin.bytes() {
             hash ^= u64::from(byte);
             hash = hash.wrapping_mul(0x100000001b3);
         }
-        format!("{hash:016x}")
+        format!("v{julia_minor}-{:08x}", hash as u32)
     }
 
-    fn managed_container_path(julia_runtime: &str) -> Result<String> {
+    fn managed_container_path(julia_bin: &str, julia_minor: &str) -> Result<String> {
         let current_dir = env::current_dir()
             .map_err(|error| format!("Failed to resolve the extension data directory: {error}"))?;
         Ok(current_dir
             .join(MANAGED_DEPOTS_DIR)
-            .join(Self::runtime_cache_key(julia_runtime))
+            .join(Self::runtime_key(julia_bin, julia_minor))
             .to_string_lossy()
             .into_owned())
     }
@@ -736,13 +743,9 @@ end
     ) -> Result<zed::Command> {
         let julia_bin = Self::resolve_julia_bin(&command_env, worktree, platform)?;
         let julia_version = Self::verify_julia_version(&julia_bin, &command_env)?;
-        // Key the depot by the Julia major.minor version only: the app-env
-        // manifest stays valid across patch releases, and `compiled/` already
-        // disambiguates patch-level precompilation caches, so patch upgrades
-        // reuse the depot instead of orphaning it.
-        let julia_runtime = format!("{julia_bin}\n{}", Self::julia_minor_version(&julia_version));
+        let julia_minor = Self::julia_minor_version(&julia_version);
 
-        let container_path = Self::managed_container_path(&julia_runtime)?;
+        let container_path = Self::managed_container_path(&julia_bin, &julia_minor)?;
         let args = Self::resolve_binary_args(settings);
         Self::args_for_subcommand(&args, "version")?;
 
@@ -1229,22 +1232,19 @@ mod tests {
     }
 
     #[test]
-    fn uses_separate_caches_for_different_julia_runtimes() {
-        let julia_112 = "/path/to/julia\n1.12";
-        let julia_113 = "/path/to/julia\n1.13";
-        let other_julia_112 = "/other/path/to/julia\n1.12";
-
+    fn keys_runtime_containers_by_minor_version_and_executable() {
+        // The key is stable across extension builds.
         assert_eq!(
-            JuliaExtension::runtime_cache_key(julia_112),
-            "fe6aa0725209c575"
+            JuliaExtension::runtime_key("/path/to/julia", "1.12"),
+            "v1.12-d46d6d4d"
         );
         assert_ne!(
-            JuliaExtension::runtime_cache_key(julia_112),
-            JuliaExtension::runtime_cache_key(julia_113)
+            JuliaExtension::runtime_key("/path/to/julia", "1.12"),
+            JuliaExtension::runtime_key("/path/to/julia", "1.13")
         );
         assert_ne!(
-            JuliaExtension::runtime_cache_key(julia_112),
-            JuliaExtension::runtime_cache_key(other_julia_112)
+            JuliaExtension::runtime_key("/path/to/julia", "1.12"),
+            JuliaExtension::runtime_key("/other/path/to/julia", "1.12")
         );
     }
 }
