@@ -181,10 +181,13 @@ precompiles JETLS.
 > The managed depots live in the `jetls-depots` directory inside Zed's work
 > directory for this extension (on macOS, for example,
 > `~/Library/Application Support/Zed/extensions/work/julia/jetls-depots`).
-> After an update, the extension garbage-collects previous JETLS versions from
-> the depot. It is always safe to delete `jetls-depots` or individual depots
-> inside it to reclaim disk space: the pinned JETLS release is reinstalled
-> automatically the next time the language server starts.
+> Updates install into a fresh directory and are published atomically, so a
+> failed or interrupted update never breaks the installation in use.
+> Superseded installations, and installations for a Julia you stopped using,
+> are cleaned up automatically after a retention period. It is always safe to
+> delete `jetls-depots` or anything inside it to reclaim disk space: the
+> pinned JETLS release is reinstalled automatically the next time the
+> language server starts.
 
 ### Launch configuration
 

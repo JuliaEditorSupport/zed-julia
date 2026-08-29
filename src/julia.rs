@@ -1,4 +1,8 @@
-use std::{env, fs, path::Path};
+use std::{
+    env, fs, io,
+    path::{Path, PathBuf},
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 use zed::LanguageServerId;
 use zed_extension_api::{
@@ -19,6 +23,21 @@ const JETLS_REVISION: &str = "2026-08-29";
 const JULIA_VERSION_LOWER_BOUND: &str = "1.12.2";
 const JULIA_VERSION_UPPER_BOUND: &str = "1.13";
 const MANAGED_DEPOTS_DIR: &str = "jetls-depots";
+const CURRENT_POINTER_FILE: &str = "current";
+const INSTALL_STAMP_FILE: &str = "install-stamp.json";
+const LAST_USED_FILE: &str = "last-used";
+// An unpublished generation may hold an installation still in progress
+// (including one whose process outlived its Zed window), so it is only
+// removed well past any plausible installation lifetime.
+const UNPUBLISHED_GENERATION_GRACE: Duration = Duration::from_secs(24 * 60 * 60);
+// A published but unreferenced generation may still be running a server in
+// another window; it is removed only after no start has resolved it for long
+// enough that no live window plausibly uses it.
+const GENERATION_RETENTION: Duration = Duration::from_secs(7 * 24 * 60 * 60);
+// A whole runtime container goes stale when the user switches Julia (another
+// executable, or another minor version). The retention is long because
+// reclaiming a runtime the user switches back to costs a full reinstall.
+const RUNTIME_RETENTION: Duration = Duration::from_secs(30 * 24 * 60 * 60);
 
 struct JuliaExtension;
 
@@ -258,7 +277,7 @@ impl JuliaExtension {
         format!("{hash:016x}")
     }
 
-    fn managed_depot_path(julia_runtime: &str) -> Result<String> {
+    fn managed_container_path(julia_runtime: &str) -> Result<String> {
         let current_dir = env::current_dir()
             .map_err(|error| format!("Failed to resolve the extension data directory: {error}"))?;
         Ok(current_dir
@@ -268,16 +287,203 @@ impl JuliaExtension {
             .into_owned())
     }
 
-    fn managed_jetls_shim(depot_path: &str, platform: zed::Os) -> String {
-        Path::new(depot_path)
-            .join("bin")
-            .join(if matches!(platform, zed::Os::Windows) {
-                "jetls.bat"
-            } else {
-                "jetls"
-            })
-            .to_string_lossy()
-            .into_owned()
+    fn current_pointer_path(container_path: &str) -> PathBuf {
+        Path::new(container_path).join(CURRENT_POINTER_FILE)
+    }
+
+    fn install_stamp_path(generation_path: &Path) -> PathBuf {
+        generation_path.join(INSTALL_STAMP_FILE)
+    }
+
+    fn last_used_path(base_path: &Path) -> PathBuf {
+        base_path.join(LAST_USED_FILE)
+    }
+
+    fn unix_nanos() -> u128 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|elapsed| elapsed.as_nanos())
+            .unwrap_or(0)
+    }
+
+    // A generation directory is never renamed once the installation ran:
+    // precompile caches record absolute source paths, so publication happens
+    // by pointing `current` at the directory, not by moving it.
+    fn new_generation_id() -> String {
+        format!("{JETLS_REVISION}-{:x}", Self::unix_nanos())
+    }
+
+    fn create_generation_directory(container_path: &str) -> Result<(String, String)> {
+        for _ in 0..8 {
+            let generation_id = Self::new_generation_id();
+            let generation_path = Path::new(container_path).join(&generation_id);
+            match fs::create_dir(&generation_path) {
+                Ok(()) => {
+                    return Ok((
+                        generation_id,
+                        generation_path.to_string_lossy().into_owned(),
+                    ))
+                }
+                Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
+                Err(error) => {
+                    return Err(format!(
+                        "Failed to create a managed JETLS generation in '{container_path}': {error}"
+                    ))
+                }
+            }
+        }
+        Err(format!(
+            "Failed to allocate a fresh managed JETLS generation in '{container_path}'"
+        ))
+    }
+
+    fn read_current_generation(container_path: &str) -> Option<String> {
+        let pointer = fs::read_to_string(Self::current_pointer_path(container_path)).ok()?;
+        let pointer: zed::serde_json::Value = zed::serde_json::from_str(&pointer).ok()?;
+        let generation_id = pointer.get("generation")?.as_str()?;
+        if generation_id.is_empty()
+            || generation_id.starts_with('.')
+            || generation_id.contains('/')
+            || generation_id.contains('\\')
+            // A ':' can carry a Windows drive prefix (e.g. `C:evil`), which
+            // `Path::join` treats as a fresh path escaping the container.
+            || generation_id.contains(':')
+        {
+            return None;
+        }
+        let generation_path = Path::new(container_path).join(generation_id);
+        fs::metadata(&generation_path)
+            .is_ok_and(|stat| stat.is_dir())
+            .then(|| generation_path.to_string_lossy().into_owned())
+    }
+
+    // Publishes a file through a uniquely named temp file and a rename, so a
+    // concurrent reader never sees torn content and the last of concurrent
+    // publishers wins. Some hosts refuse to rename over an existing file; the
+    // fallback loses atomicity, but a reader hitting the gap only re-installs.
+    fn replace_file(file_path: &Path, content: &str) -> io::Result<()> {
+        let mut temp_path = file_path.as_os_str().to_owned();
+        temp_path.push(format!(".{:x}.tmp", Self::unix_nanos()));
+        let temp_path = PathBuf::from(temp_path);
+        fs::write(&temp_path, content)?;
+        fs::rename(&temp_path, file_path).or_else(|_| {
+            let _ = fs::remove_file(file_path);
+            fs::rename(&temp_path, file_path)
+        })
+    }
+
+    // Every published generation is complete, so either of two concurrent
+    // publishers is a valid winner.
+    fn write_current_generation(container_path: &str, generation_id: &str) -> Result<()> {
+        let pointer = zed::serde_json::json!({ "generation": generation_id }).to_string();
+        Self::replace_file(&Self::current_pointer_path(container_path), &pointer)
+            .map_err(|error| format!("Failed to publish the managed JETLS generation: {error}"))
+    }
+
+    // The stamp marks the generation complete for cleanup (a missing stamp
+    // means a possibly in-progress installation). Best-effort: without it the
+    // generation is merely reclaimed on the shorter grace once superseded.
+    //
+    // The recorded (pin, exact Julia version) pair would also allow skipping
+    // the per-start `jetls version` probe (~1s warm) like jetls-vscode does.
+    // Adopting that fast path needs a way to invalidate the stamp of a broken
+    // generation, but Zed neither notifies extensions of server failures nor
+    // auto-restarts crashed servers, so a stale stamp would pin starts to a
+    // failure loop that only manual storage deletion escapes. Revisit if Zed
+    // gains a failure signal.
+    fn write_install_stamp(generation_path: &str, julia_version: &str) {
+        let stamp = zed::serde_json::json!({
+            "revision": JETLS_REVISION,
+            "julia": julia_version,
+        })
+        .to_string();
+        let _ = Self::replace_file(
+            &Self::install_stamp_path(Path::new(generation_path)),
+            &stamp,
+        );
+    }
+
+    // Records that a start resolved this generation (or runtime container),
+    // so cleanup keeps what a still-open window may be running a server from.
+    fn touch_last_used(base_path: &Path) {
+        let _ = fs::write(Self::last_used_path(base_path), "");
+    }
+
+    fn path_age(path: &Path) -> Option<Duration> {
+        let modified = fs::metadata(path).ok()?.modified().ok()?;
+        SystemTime::now().duration_since(modified).ok()
+    }
+
+    fn entry_age(path: &Path) -> Option<Duration> {
+        Self::path_age(&Self::last_used_path(path)).or_else(|| Self::path_age(path))
+    }
+
+    fn should_remove_entry(published: bool, age: Option<Duration>) -> bool {
+        let grace = if published {
+            GENERATION_RETENTION
+        } else {
+            UNPUBLISHED_GENERATION_GRACE
+        };
+        age.is_some_and(|age| age > grace)
+    }
+
+    fn remove_path(path: &Path) {
+        let _ = if fs::metadata(path).is_ok_and(|stat| stat.is_dir()) {
+            fs::remove_dir_all(path)
+        } else {
+            fs::remove_file(path)
+        };
+    }
+
+    // Removes what no start can need anymore: unpublished generations old
+    // enough that no installation can still be producing them, published
+    // generations that no start has resolved within the retention, and
+    // sibling runtime containers the user stopped using. Container entries
+    // that are not control files are judged as generations, which also ages
+    // out depots from the pre-generation layout. The current generation and
+    // the active container are never touched. Best-effort: a failure only
+    // defers cleanup.
+    fn cleanup_managed_storage(container_path: &str) {
+        let current_generation = Self::read_current_generation(container_path);
+        if let Ok(entries) = fs::read_dir(container_path) {
+            for entry in entries.flatten() {
+                let name = entry.file_name().to_string_lossy().into_owned();
+                if name == CURRENT_POINTER_FILE || name == LAST_USED_FILE {
+                    continue;
+                }
+                let entry_path = entry.path();
+                if current_generation.as_deref() == Some(entry_path.to_string_lossy().as_ref()) {
+                    continue;
+                }
+                let published = fs::metadata(Self::install_stamp_path(&entry_path))
+                    .is_ok_and(|stat| stat.is_file());
+                if Self::should_remove_entry(published, Self::entry_age(&entry_path)) {
+                    Self::remove_path(&entry_path);
+                }
+            }
+        }
+        let Some(depots_path) = Path::new(container_path).parent() else {
+            return;
+        };
+        // The sweep deletes whole directory trees, so refuse to run anywhere
+        // but the extension's own storage directory.
+        if depots_path
+            .file_name()
+            .is_none_or(|name| name != MANAGED_DEPOTS_DIR)
+        {
+            return;
+        }
+        if let Ok(entries) = fs::read_dir(depots_path) {
+            for entry in entries.flatten() {
+                let entry_path = entry.path();
+                if entry_path == Path::new(container_path) {
+                    continue;
+                }
+                if Self::entry_age(&entry_path).is_some_and(|age| age > RUNTIME_RETENTION) {
+                    Self::remove_path(&entry_path);
+                }
+            }
+        }
     }
 
     fn path_list_separator(platform: zed::Os) -> char {
@@ -499,32 +705,26 @@ end
         Ok(())
     }
 
-    fn collect_managed_garbage(
+    fn install_generation(
         julia_bin: &str,
-        depot_path: &str,
+        container_path: &str,
+        julia_version: &str,
+        args: &[String],
+        command_env: &[(String, String)],
         platform: zed::Os,
-        env: &[(String, String)],
-    ) -> Result<()> {
-        // The depot only needs to serve the pinned release, so reclaim
-        // packages orphaned by the update immediately instead of waiting for
-        // Pkg's default 7-day grace period.
-        const GC_SCRIPT: &str = "import Pkg, Dates; Pkg.gc(; collect_delay=Dates.Day(0))";
-        let mut gc_env = env.to_vec();
-        let depot_chain = Self::maintenance_depot_chain(depot_path, platform);
-        Self::set_env_value(&mut gc_env, "JULIA_DEPOT_PATH", depot_chain);
-        let output = Self::run_command(
-            julia_bin,
-            vec![
-                "--startup-file=no".to_string(),
-                "--history-file=no".to_string(),
-                "-e".to_string(),
-                GC_SCRIPT.to_string(),
-            ],
-            &gc_env,
-            "the managed JETLS depot garbage collection",
-        )?;
-        Self::successful_output(output, "The managed JETLS depot garbage collection")?;
-        Ok(())
+    ) -> Result<String> {
+        let (generation_id, generation_path) = Self::create_generation_directory(container_path)?;
+        Self::install_managed_jetls(julia_bin, &generation_path, platform, command_env)?;
+        let launch_env = Self::server_launch_env(command_env.to_vec(), &generation_path, platform);
+        let installed_version = Self::run_version_command(julia_bin, args, &launch_env)?;
+        if !Self::is_pinned_jetls_version(&installed_version) {
+            return Err(format!(
+                "Managed JETLS installation returned an unexpected version. Expected {JETLS_REVISION}, got:\n{installed_version}"
+            ));
+        }
+        Self::write_install_stamp(&generation_path, julia_version);
+        Self::write_current_generation(container_path, &generation_id)?;
+        Ok(generation_path)
     }
 
     fn managed_server_command(
@@ -542,69 +742,66 @@ end
         // reuse the depot instead of orphaning it.
         let julia_runtime = format!("{julia_bin}\n{}", Self::julia_minor_version(&julia_version));
 
-        let depot_path = Self::managed_depot_path(&julia_runtime)?;
-        // The Pkg.Apps shim pins `JULIA_DEPOT_PATH` to the managed depot only,
-        // hiding the user depot's packages and precompile caches, so launches
-        // bypass it via `julia -m JETLS`; the shim file only marks a completed
-        // installation.
-        let jetls_shim = Self::managed_jetls_shim(&depot_path, platform);
+        let container_path = Self::managed_container_path(&julia_runtime)?;
         let args = Self::resolve_binary_args(settings);
         Self::args_for_subcommand(&args, "version")?;
-        let launch_env = Self::server_launch_env(command_env.clone(), &depot_path, platform);
 
-        // Failures below implicate the state of the managed depot, so extend
-        // them with a manual recovery hint pointing at its location.
-        (|| -> Result<()> {
-            let installed_version = if fs::metadata(&jetls_shim).is_ok_and(|stat| stat.is_file()) {
-                Some(Self::run_version_command(&julia_bin, &args, &launch_env))
-            } else {
-                None
-            };
+        fs::create_dir_all(&container_path).map_err(|error| {
+            format!("Failed to create the managed JETLS storage '{container_path}': {error}")
+        })?;
+        // Keep the runtime container alive against the stale-runtime sweep
+        // while a potentially long installation runs.
+        Self::touch_last_used(Path::new(&container_path));
 
-            if Self::managed_installation_needs_update(installed_version.as_ref()) {
-                zed::set_language_server_installation_status(
-                    server_id,
-                    &zed::LanguageServerInstallationStatus::Downloading,
-                );
-                if let Err(installation_error) = Self::install_managed_jetls(
-                    &julia_bin,
-                    &depot_path,
-                    platform,
-                    &command_env,
-                ) {
-                    let error = if let Some(Err(verification_error)) = installed_version.as_ref() {
-                        format!(
-                            "The cached managed JETLS installation failed verification:\n{verification_error}\nFailed to repair the managed JETLS installation:\n{installation_error}"
-                        )
-                    } else {
-                        installation_error
-                    };
-                    return Err(error);
-                }
-
-                let installed_version = Self::run_version_command(&julia_bin, &args, &launch_env)?;
-                if !Self::is_pinned_jetls_version(&installed_version) {
-                    return Err(format!(
-                        "Managed JETLS installation returned an unexpected version. Expected {JETLS_REVISION}, got:\n{installed_version}"
-                    ));
-                }
-
-                // Garbage collection is housekeeping: the pinned release is already verified above,
-                // so do not fail the launch over it.
-                if let Err(error) =
-                    Self::collect_managed_garbage(&julia_bin, &depot_path, platform, &command_env)
-                {
-                    eprintln!("Failed to garbage-collect the managed JETLS depot: {error}");
-                }
+        // Updates never touch the published generation: a failed or aborted
+        // installation only strands its own unpublished generation (later
+        // reclaimed by cleanup), so a retry starts from a clean slate.
+        let generation_path = (|| -> Result<String> {
+            let current_generation = Self::read_current_generation(&container_path);
+            let installed_version = current_generation.as_ref().map(|generation| {
+                let probe_env = Self::server_launch_env(command_env.clone(), generation, platform);
+                Self::run_version_command(&julia_bin, &args, &probe_env)
+            });
+            if let (Some(generation), false) = (
+                &current_generation,
+                Self::managed_installation_needs_update(installed_version.as_ref()),
+            ) {
+                return Ok(generation.clone());
             }
-            Ok(())
+
+            zed::set_language_server_installation_status(
+                server_id,
+                &zed::LanguageServerInstallationStatus::Downloading,
+            );
+            Self::install_generation(
+                &julia_bin,
+                &container_path,
+                &julia_version,
+                &args,
+                &command_env,
+                platform,
+            )
+            .map_err(|installation_error| {
+                if let Some(Err(verification_error)) = installed_version.as_ref() {
+                    format!(
+                        "The cached managed JETLS installation failed verification:\n{verification_error}\nFailed to repair the managed JETLS installation:\n{installation_error}"
+                    )
+                } else {
+                    installation_error
+                }
+            })
         })()
         .map_err(|error| {
             format!(
-                "{error}\nIf the error persists, delete the managed JETLS depot at '{depot_path}' and restart the language server."
+                "{error}\nIf the error persists, delete the managed JETLS storage at '{container_path}' and restart the language server."
             )
         })?;
 
+        Self::touch_last_used(Path::new(&generation_path));
+        Self::touch_last_used(Path::new(&container_path));
+        Self::cleanup_managed_storage(&container_path);
+
+        let launch_env = Self::server_launch_env(command_env, &generation_path, platform);
         Ok(zed::Command {
             command: julia_bin,
             args: Self::julia_launch_args(&args),
@@ -831,6 +1028,102 @@ mod tests {
         assert!(!JuliaExtension::is_pinned_jetls_version(
             "unexpected output\n"
         ));
+    }
+
+    fn temp_container(name: &str) -> (std::path::PathBuf, String) {
+        // Nest under a `jetls-depots` directory so the stale-runtime sweep in
+        // `cleanup_managed_storage` stays inside the test sandbox.
+        let base = std::env::temp_dir().join(format!(
+            "zed-julia-test-{name}-{:x}",
+            JuliaExtension::unix_nanos()
+        ));
+        let container = base.join(MANAGED_DEPOTS_DIR).join("runtime");
+        std::fs::create_dir_all(&container).unwrap();
+        (base, container.to_string_lossy().into_owned())
+    }
+
+    #[test]
+    fn generation_ids_embed_the_pinned_revision() {
+        let id = JuliaExtension::new_generation_id();
+        let suffix = id.strip_prefix(&format!("{JETLS_REVISION}-")).unwrap();
+        assert!(!suffix.is_empty());
+        assert!(suffix
+            .chars()
+            .all(|character| character.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn publishes_and_resolves_the_current_generation() {
+        let (base, container) = temp_container("publish");
+        assert_eq!(JuliaExtension::read_current_generation(&container), None);
+
+        let (generation_id, generation_path) =
+            JuliaExtension::create_generation_directory(&container).unwrap();
+        JuliaExtension::write_current_generation(&container, &generation_id).unwrap();
+        assert_eq!(
+            JuliaExtension::read_current_generation(&container),
+            Some(generation_path)
+        );
+
+        // Republishing atomically points at the newer generation.
+        let (new_id, new_path) = JuliaExtension::create_generation_directory(&container).unwrap();
+        JuliaExtension::write_current_generation(&container, &new_id).unwrap();
+        assert_eq!(
+            JuliaExtension::read_current_generation(&container),
+            Some(new_path)
+        );
+
+        std::fs::remove_dir_all(&base).unwrap();
+    }
+
+    #[test]
+    fn rejects_invalid_current_pointers() {
+        let (base, container) = temp_container("pointer");
+        let pointer_path = JuliaExtension::current_pointer_path(&container);
+        for generation in ["../evil", "a/b", r"a\b", ".hidden", "C:evil", ""] {
+            std::fs::write(&pointer_path, format!("{{\"generation\": {generation:?}}}")).unwrap();
+            assert_eq!(JuliaExtension::read_current_generation(&container), None);
+        }
+        std::fs::write(&pointer_path, "garbage").unwrap();
+        assert_eq!(JuliaExtension::read_current_generation(&container), None);
+
+        // A pointer to a missing generation directory is also ignored.
+        std::fs::write(&pointer_path, "{\"generation\": \"missing\"}").unwrap();
+        assert_eq!(JuliaExtension::read_current_generation(&container), None);
+
+        std::fs::remove_dir_all(&base).unwrap();
+    }
+
+    #[test]
+    fn reclaims_entries_only_after_their_grace() {
+        const HOUR: Duration = Duration::from_secs(60 * 60);
+        const DAY: Duration = Duration::from_secs(24 * 60 * 60);
+        // An unknown age never removes.
+        assert!(!JuliaExtension::should_remove_entry(false, None));
+        // In-progress installations survive the short grace...
+        assert!(!JuliaExtension::should_remove_entry(false, Some(HOUR)));
+        // ...but abandoned ones are reclaimed soon after it.
+        assert!(JuliaExtension::should_remove_entry(false, Some(2 * DAY)));
+        // Published generations outlive the unpublished grace...
+        assert!(!JuliaExtension::should_remove_entry(true, Some(2 * DAY)));
+        // ...until no window has plausibly resolved them within the retention.
+        assert!(JuliaExtension::should_remove_entry(true, Some(8 * DAY)));
+    }
+
+    #[test]
+    fn cleanup_keeps_the_current_generation_and_fresh_entries() {
+        let (base, container) = temp_container("cleanup");
+        let (current_id, current_path) =
+            JuliaExtension::create_generation_directory(&container).unwrap();
+        JuliaExtension::write_install_stamp(&current_path, "1.12.6");
+        JuliaExtension::write_current_generation(&container, &current_id).unwrap();
+        let (_, fresh_path) = JuliaExtension::create_generation_directory(&container).unwrap();
+
+        JuliaExtension::cleanup_managed_storage(&container);
+
+        assert!(std::fs::metadata(&current_path).is_ok());
+        assert!(std::fs::metadata(&fresh_path).is_ok());
+        std::fs::remove_dir_all(&base).unwrap();
     }
 
     #[test]
