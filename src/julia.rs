@@ -14,6 +14,7 @@ use zed_extension_api::{
 };
 
 const JETLS_REPOSITORY: &str = "https://github.com/aviatesk/JETLS.jl";
+const JETLS_RAW_CONTENT: &str = "https://raw.githubusercontent.com/aviatesk/JETLS.jl";
 // Bump this dated tag together with the zed-julia extension release, and keep
 // the Julia version bounds below in sync with the `julia` compat declared in
 // the pinned revision's Project.toml; CI verifies the bounds via `scripts/check-julia-bounds.sh`.
@@ -26,6 +27,7 @@ const MANAGED_DEPOTS_DIR: &str = "jetls-depots";
 const CURRENT_POINTER_FILE: &str = "current";
 const INSTALL_STAMP_FILE: &str = "install-stamp.json";
 const LAST_USED_FILE: &str = "last-used";
+const RELEASE_DESCRIPTOR_FILE: &str = "release-descriptor";
 // An unpublished generation may hold an installation still in progress
 // (including one whose process outlived its Zed window), so it is only
 // removed well past any plausible installation lifetime.
@@ -740,6 +742,57 @@ end
             .unwrap_or_else(Self::default_launch_args)
     }
 
+    // The managed installation downloads through Julia's package manager,
+    // which Zed cannot police. Fetching the pinned release's version
+    // descriptor through Zed's downloader first gives Zed's download policy a
+    // say: when downloads are disallowed on the Zed side, the managed
+    // installation aborts before any other network activity starts. The
+    // descriptor also verifies that the pinned tag still exists and matches
+    // the pin before the expensive installation begins. `download_file`
+    // resolves relative paths against the extension work directory, which is
+    // also the directory the managed storage is keyed from.
+    fn verify_pinned_release_descriptor(generation_path: &str) -> Result<()> {
+        let current_dir = env::current_dir()
+            .map_err(|error| format!("Failed to resolve the extension data directory: {error}"))?;
+        let descriptor_path = Path::new(generation_path).join(RELEASE_DESCRIPTOR_FILE);
+        let download_path = descriptor_path
+            .strip_prefix(&current_dir)
+            .map_err(|_| {
+                format!(
+                    "The managed JETLS storage '{generation_path}' is outside the extension data directory"
+                )
+            })?
+            .to_string_lossy()
+            .into_owned();
+        let descriptor_url = format!("{JETLS_RAW_CONTENT}/{JETLS_REVISION}/JETLS_VERSION");
+        zed::download_file(
+            &descriptor_url,
+            &download_path,
+            zed::DownloadedFileType::Uncompressed,
+        )
+        .map_err(|error| {
+            format!(
+                "Failed to fetch the pinned JETLS release descriptor through Zed (downloads \
+                 may be disallowed in Zed, or the network may be unavailable); the managed \
+                 JETLS installation was not started:\n{error}"
+            )
+        })?;
+        let descriptor = fs::read_to_string(&descriptor_path).map_err(|error| {
+            format!("Failed to read the downloaded JETLS release descriptor: {error}")
+        })?;
+        if !Self::is_pinned_release_descriptor(&descriptor) {
+            return Err(format!(
+                "The pinned JETLS release descriptor does not match {JETLS_REVISION}: got '{}'",
+                descriptor.trim()
+            ));
+        }
+        Ok(())
+    }
+
+    fn is_pinned_release_descriptor(descriptor: &str) -> bool {
+        descriptor.trim() == JETLS_REVISION
+    }
+
     fn install_managed_jetls(
         julia_bin: &str,
         depot_path: &str,
@@ -784,6 +837,7 @@ end
         platform: zed::Os,
     ) -> Result<String> {
         let (generation_id, generation_path) = Self::create_generation_directory(container_path)?;
+        Self::verify_pinned_release_descriptor(&generation_path)?;
         Self::install_managed_jetls(julia_bin, &generation_path, platform, command_env)?;
         let launch_env = Self::server_launch_env(command_env.to_vec(), &generation_path, platform);
         let installed_version = Self::run_version_command(julia_bin, args, &launch_env)?;
@@ -1148,6 +1202,16 @@ mod tests {
             JuliaExtension::env_value(&launch_env, "JULIA_LOAD_PATH", zed::Os::Mac),
             Some("/managed/environments/apps/JETLS")
         );
+    }
+
+    #[test]
+    fn accepts_only_the_pinned_release_descriptor() {
+        assert!(JuliaExtension::is_pinned_release_descriptor(&format!(
+            "{JETLS_REVISION}\n"
+        )));
+        assert!(JuliaExtension::is_pinned_release_descriptor(JETLS_REVISION));
+        assert!(!JuliaExtension::is_pinned_release_descriptor("dev\n"));
+        assert!(!JuliaExtension::is_pinned_release_descriptor(""));
     }
 
     #[test]
