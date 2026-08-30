@@ -229,68 +229,62 @@ of JETLS. For example, to run the server on a single thread:
 [`binary.env` runtime overrides](#julia-for-jetls) to pair custom arguments
 with a specific Julia channel or executable.
 
+#### Running JETLS from a source checkout
+
+To run JETLS from a local checkout or fork, point the launch at it with
+`--project` in `binary.arguments`, leaving `binary.path` unset:
+
+> `~/.config/zed/settings.json` (global) or `.zed/settings.json` (per-project)
+
+```jsonc
+{
+  "lsp": {
+    "JETLS": {
+      "binary": {
+        "arguments": ["--project=/path/to/JETLS/directory", "--", "serve"],
+      },
+    },
+  },
+}
+```
+
+When the Julia arguments contain `--project`, the launch provides its own
+JETLS instead of the managed installation. The extension still verifies
+the Julia version and that the configured server starts, but skips the
+managed installation and its pin verification, and the checkout resolves
+its dependencies against your regular Julia environment. Keep the
+checkout's environment instantiated: a broken checkout is reported before
+the server starts.
+
 #### Custom JETLS command
 
-Set `binary.path` to a command that starts a compatible language server over
-standard input and output.
+Setting `binary.path` bypasses the extension entirely: Zed launches exactly
+the command you specify, with no version preflight, no default arguments,
+and no managed installation. Prefer the `binary.arguments` forms above when
+they can express your setup; use `binary.path` for a server the extension
+cannot launch itself, such as a JETLS binary you manage yourself with a
+user-global [`Pkg.Apps`](https://pkgdocs.julialang.org/dev/apps/) install:
 
-Zed accepts absolute paths, `~`-relative paths, worktree-relative executables
-such as `tools/start-jetls`, and bare commands such as `julia`.
-Worktree-relative paths are resolved against the worktree root; bare commands
-that are not worktree entries are resolved through the worktree `PATH`.
-Scripts must be directly executable; otherwise, set `binary.path` to their
-interpreter and include the script path in `binary.arguments`.
+> `~/.config/zed/settings.json` (global) or `.zed/settings.json` (per-project)
 
-> [!note]
->
-> Setting `binary.path` bypasses the extension's managed installation and
-> version preflight. Install custom commands yourself, and complete any required
-> compilation before starting the language server to avoid the LSP
-> initialization timeout.
-
-- To use a JETLS binary you manage yourself, such as a user-global
-  `~/.julia/bin/jetls` installed with
-  [`Pkg.Apps`](https://pkgdocs.julialang.org/dev/apps/):
-
-  > `~/.config/zed/settings.json` (global) or `.zed/settings.json` (per-project)
-
-  ```jsonc
-  {
-    "lsp": {
-      "JETLS": {
-        "binary": {
-          "path": "~/.julia/bin/jetls",
-          "arguments": ["serve"],
-        },
+```jsonc
+{
+  "lsp": {
+    "JETLS": {
+      "binary": {
+        "path": "~/.julia/bin/jetls",
+        "arguments": ["serve"],
       },
     },
-  }
-  ```
+  },
+}
+```
 
-- To develop JETLS from a local checkout, launch it with Julia directly:
-
-  > `~/.config/zed/settings.json` (global) or `.zed/settings.json` (per-project)
-
-  ```jsonc
-  {
-    "lsp": {
-      "JETLS": {
-        "binary": {
-          "path": "julia",
-          "arguments": [
-            "--startup-file=no",
-            "--history-file=no",
-            "--threads=auto",
-            "--project=/path/to/JETLS/directory",
-            "-m",
-            "JETLS",
-            "serve",
-          ],
-        },
-      },
-    },
-  }
-  ```
+The command must start a compatible language server over standard input and
+output. Zed accepts absolute paths, `~`-relative paths, worktree-relative
+paths, and bare command names resolved through the worktree `PATH`. Install
+custom commands yourself, and complete any required compilation before
+starting the language server to avoid the LSP initialization timeout.
 
 ### Server configuration
 
