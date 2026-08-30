@@ -556,11 +556,27 @@ impl JuliaExtension {
 
     // Mirror the shim's argument protocol: arguments before a `--` separator go
     // to `julia` itself, the rest to the JETLS app.
-    fn julia_launch_args(shim_args: &[String]) -> Vec<String> {
-        let (julia_args, app_args) = match shim_args.iter().position(|arg| arg == "--") {
+    fn split_shim_args(shim_args: &[String]) -> (&[String], &[String]) {
+        match shim_args.iter().position(|arg| arg == "--") {
             Some(separator) => (&shim_args[..separator], &shim_args[separator + 1..]),
             None => (&shim_args[..0], shim_args),
-        };
+        }
+    }
+
+    // `--project` switches the project `-m JETLS` resolves against, so such a
+    // launch loads JETLS from somewhere the managed installation does not
+    // control. Sysimage flags are deliberately not treated this way: how
+    // custom sysimages should interact with the server is still open
+    // (aviatesk/JETLS.jl#366).
+    fn overrides_jetls_source(shim_args: &[String]) -> bool {
+        let (julia_args, _) = Self::split_shim_args(shim_args);
+        julia_args
+            .iter()
+            .any(|argument| argument == "--project" || argument.starts_with("--project="))
+    }
+
+    fn julia_launch_args(shim_args: &[String]) -> Vec<String> {
+        let (julia_args, app_args) = Self::split_shim_args(shim_args);
         let mut args = vec![
             "--startup-file=no".to_string(),
             "--history-file=no".to_string(),
@@ -647,16 +663,22 @@ end
 
     // Parses the `jetls version <revision>, julia version <version>` output
     // used by JETLS releases since 2026-08-23.
-    fn is_pinned_jetls_version(version_output: &str) -> bool {
+    fn jetls_version_line(version_output: &str) -> Option<&str> {
         let mut versions = version_output
             .lines()
             .filter_map(|line| line.trim().strip_prefix("jetls version "));
-        let (Some(rest), None) = (versions.next(), versions.next()) else {
-            return false;
-        };
+        match (versions.next(), versions.next()) {
+            (Some(rest), None) => Some(rest),
+            _ => None,
+        }
+    }
+
+    fn is_pinned_jetls_version(version_output: &str) -> bool {
         matches!(
-            rest.split(|character: char| character == ',' || character.is_whitespace())
-                .next(),
+            Self::jetls_version_line(version_output).and_then(|rest| {
+                rest.split(|character: char| character == ',' || character.is_whitespace())
+                    .next()
+            }),
             Some(version) if version == JETLS_REVISION
         )
     }
@@ -743,11 +765,37 @@ end
     ) -> Result<zed::Command> {
         let julia_bin = Self::resolve_julia_bin(&command_env, worktree, platform)?;
         let julia_version = Self::verify_julia_version(&julia_bin, &command_env)?;
-        let julia_minor = Self::julia_minor_version(&julia_version);
 
-        let container_path = Self::managed_container_path(&julia_bin, &julia_minor)?;
         let args = Self::resolve_binary_args(settings);
         Self::args_for_subcommand(&args, "version")?;
+
+        // A launch that loads JETLS from a user-controlled source cannot use
+        // the pinned managed installation: verify that the configured launch
+        // works, but skip pin verification and the managed installation, and
+        // leave the environment untouched so the provided JETLS resolves its
+        // dependencies against the user's regular depots.
+        if Self::overrides_jetls_source(&args) {
+            let version_output = Self::run_version_command(&julia_bin, &args, &command_env)
+                .map_err(|error| {
+                    format!(
+                        "The Julia arguments provide their own JETLS, but launching it failed:\n{error}"
+                    )
+                })?;
+            if Self::jetls_version_line(&version_output).is_none() {
+                return Err(format!(
+                    "The Julia arguments provide their own JETLS, but its version check \
+                     returned unexpected output:\n{version_output}"
+                ));
+            }
+            return Ok(zed::Command {
+                command: julia_bin,
+                args: Self::julia_launch_args(&args),
+                env: command_env,
+            });
+        }
+
+        let julia_minor = Self::julia_minor_version(&julia_version);
+        let container_path = Self::managed_container_path(&julia_bin, &julia_minor)?;
 
         fs::create_dir_all(&container_path).map_err(|error| {
             format!("Failed to create the managed JETLS storage '{container_path}': {error}")
@@ -947,6 +995,30 @@ mod tests {
                 "serve"
             ])
         );
+    }
+
+    #[test]
+    fn detects_julia_args_that_override_the_jetls_source() {
+        let overrides = |args: &[&str]| JuliaExtension::overrides_jetls_source(&strings(args));
+        assert!(overrides(&["--project=/dev/JETLS", "--", "serve"]));
+        assert!(overrides(&["--project", "--", "serve"]));
+        assert!(!overrides(&["--threads=1", "--", "serve"]));
+        assert!(!overrides(&["serve"]));
+        // Sysimage flags stay on the managed path for now (JETLS.jl#366).
+        assert!(!overrides(&["-J/sys.so", "--", "serve"]));
+        assert!(!overrides(&["--sysimage=/sys.so", "--", "serve"]));
+        // Only arguments before the `--` separator go to `julia`; without the
+        // separator, everything is a JETLS app argument.
+        assert!(!overrides(&["--project=/dev/JETLS", "serve"]));
+    }
+
+    #[test]
+    fn accepts_any_self_provided_jetls_version_output() {
+        assert!(
+            JuliaExtension::jetls_version_line("jetls version dev, julia version 1.12.7\n")
+                .is_some()
+        );
+        assert!(JuliaExtension::jetls_version_line("ERROR: Package JETLS not found\n").is_none());
     }
 
     #[test]
