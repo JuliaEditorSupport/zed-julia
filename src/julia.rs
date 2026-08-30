@@ -554,13 +554,33 @@ impl JuliaExtension {
         env
     }
 
-    // Mirror the shim's argument protocol: arguments before a `--` separator go
-    // to `julia` itself, the rest to the JETLS app.
-    fn split_shim_args(shim_args: &[String]) -> (&[String], &[String]) {
-        match shim_args.iter().position(|arg| arg == "--") {
-            Some(separator) => (&shim_args[..separator], &shim_args[separator + 1..]),
-            None => (&shim_args[..0], shim_args),
+    // Locates the `-m JETLS` (or `--module JETLS`) entry point within a full
+    // `julia` argument list.
+    fn module_entry_position(args: &[String]) -> Option<usize> {
+        args.iter()
+            .position(|argument| argument == "-mJETLS" || argument == "--module=JETLS")
+            .or_else(|| {
+                args.windows(2).position(|pair| {
+                    (pair[0] == "-m" || pair[0] == "--module") && pair[1] == "JETLS"
+                })
+            })
+    }
+
+    // Zed replaces a language server command's arguments verbatim with
+    // `binary.arguments` whenever they are set, so the configured arguments
+    // must spell out the full `julia` invocation: the extension cannot inject
+    // default flags or the `-m JETLS` entry point into the launch. Validate
+    // the shape up front to fail with an actionable error instead of letting
+    // `julia` treat `serve` as a script path.
+    fn validate_launch_args(args: &[String]) -> Result<()> {
+        let subcommand_prefix = Self::args_for_subcommand(args, "version")?;
+        if Self::module_entry_position(&subcommand_prefix).is_none() {
+            return Err(format!(
+                "Invalid JETLS binary arguments: expected a full `julia` invocation with \
+                 `-m JETLS` before the `serve` subcommand, got {args:?}"
+            ));
         }
+        Ok(())
     }
 
     // `--project` switches the project `-m JETLS` resolves against, so such a
@@ -568,25 +588,27 @@ impl JuliaExtension {
     // control. Sysimage flags are deliberately not treated this way: how
     // custom sysimages should interact with the server is still open
     // (aviatesk/JETLS.jl#366).
-    fn overrides_jetls_source(shim_args: &[String]) -> bool {
-        let (julia_args, _) = Self::split_shim_args(shim_args);
-        julia_args
+    fn overrides_jetls_source(args: &[String]) -> bool {
+        let julia_flags = match Self::module_entry_position(args) {
+            Some(position) => &args[..position],
+            None => args,
+        };
+        julia_flags
             .iter()
             .any(|argument| argument == "--project" || argument.starts_with("--project="))
     }
 
-    fn julia_launch_args(shim_args: &[String]) -> Vec<String> {
-        let (julia_args, app_args) = Self::split_shim_args(shim_args);
-        let mut args = vec![
-            "--startup-file=no".to_string(),
-            "--history-file=no".to_string(),
-            "--threads=auto".to_string(),
-        ];
-        args.extend(julia_args.iter().cloned());
-        args.push("-m".to_string());
-        args.push("JETLS".to_string());
-        args.extend(app_args.iter().cloned());
-        args
+    fn default_launch_args() -> Vec<String> {
+        [
+            "--startup-file=no",
+            "--history-file=no",
+            "--threads=auto",
+            "-m",
+            "JETLS",
+            "serve",
+        ]
+        .map(String::from)
+        .to_vec()
     }
 
     fn run_command(
@@ -646,8 +668,7 @@ end
         base_args: &[String],
         env: &[(String, String)],
     ) -> Result<String> {
-        let subcommand_args = Self::args_for_subcommand(base_args, "version")?;
-        let args = Self::julia_launch_args(&subcommand_args);
+        let args = Self::args_for_subcommand(base_args, "version")?;
         let output = Self::run_command(julia_bin, args, env, "the JETLS version check")?;
         Self::successful_output(output, "The JETLS version check")
     }
@@ -696,7 +717,7 @@ end
             .as_ref()
             .and_then(|b| b.arguments.as_ref())
             .cloned()
-            .unwrap_or_else(|| vec!["serve".to_string()])
+            .unwrap_or_else(Self::default_launch_args)
     }
 
     fn install_managed_jetls(
@@ -767,7 +788,7 @@ end
         let julia_version = Self::verify_julia_version(&julia_bin, &command_env)?;
 
         let args = Self::resolve_binary_args(settings);
-        Self::args_for_subcommand(&args, "version")?;
+        Self::validate_launch_args(&args)?;
 
         // A launch that loads JETLS from a user-controlled source cannot use
         // the pinned managed installation: verify that the configured launch
@@ -789,7 +810,7 @@ end
             }
             return Ok(zed::Command {
                 command: julia_bin,
-                args: Self::julia_launch_args(&args),
+                args,
                 env: command_env,
             });
         }
@@ -855,7 +876,7 @@ end
         let launch_env = Self::server_launch_env(command_env, &generation_path, platform);
         Ok(zed::Command {
             command: julia_bin,
-            args: Self::julia_launch_args(&args),
+            args,
             env: launch_env,
         })
     }
@@ -951,65 +972,63 @@ mod tests {
 
     #[test]
     fn derives_sibling_jetls_subcommands() {
-        let args = strings(&["--threads=1", "--", "serve", "ignored"]);
+        // App arguments after `serve` are dropped; the prefix (julia flags and
+        // the module entry point) is preserved.
+        let args = strings(&["-m", "JETLS", "serve", "--some-app-flag"]);
         assert_eq!(
             JuliaExtension::args_for_subcommand(&args, "version").unwrap(),
-            strings(&["--threads=1", "--", "version"])
+            strings(&["-m", "JETLS", "version"])
         );
     }
 
     #[test]
     fn rejects_ambiguous_serve_subcommands() {
-        let missing = strings(&["--threads=1"]);
+        let missing = strings(&["-m", "JETLS"]);
         assert!(JuliaExtension::args_for_subcommand(&missing, "version").is_err());
 
-        let repeated = strings(&["serve", "--", "serve"]);
+        let repeated = strings(&["-m", "JETLS", "serve", "serve"]);
         assert!(JuliaExtension::args_for_subcommand(&repeated, "version").is_err());
     }
 
     #[test]
-    fn launches_julia_directly_with_the_shim_argument_protocol() {
-        // Without a `--` separator, every argument goes to the JETLS app.
-        assert_eq!(
-            JuliaExtension::julia_launch_args(&strings(&["serve"])),
-            strings(&[
-                "--startup-file=no",
-                "--history-file=no",
-                "--threads=auto",
-                "-m",
-                "JETLS",
-                "serve"
-            ])
-        );
-        // Arguments before `--` go to `julia` itself, after the defaults so
-        // they can override them.
-        assert_eq!(
-            JuliaExtension::julia_launch_args(&strings(&["--threads=1", "--", "serve"])),
-            strings(&[
-                "--startup-file=no",
-                "--history-file=no",
-                "--threads=auto",
-                "--threads=1",
-                "-m",
-                "JETLS",
-                "serve"
-            ])
-        );
+    fn validates_full_julia_invocations() {
+        let validate = |args: &[&str]| JuliaExtension::validate_launch_args(&strings(args));
+        assert!(validate(
+            &JuliaExtension::default_launch_args()
+                .iter()
+                .map(String::as_str)
+                .collect::<Vec<_>>()
+        )
+        .is_ok());
+        assert!(validate(&["--threads=1", "-m", "JETLS", "serve"]).is_ok());
+        assert!(validate(&["-mJETLS", "serve"]).is_ok());
+        assert!(validate(&["--module=JETLS", "serve"]).is_ok());
+        assert!(validate(&["--module", "JETLS", "serve"]).is_ok());
+        // The old shim-protocol shapes lack the `-m JETLS` entry point.
+        assert!(validate(&["serve"]).is_err());
+        assert!(validate(&["--threads=1", "--", "serve"]).is_err());
+        // The entry point must come before `serve`.
+        assert!(validate(&["serve", "-m", "JETLS"]).is_err());
     }
 
     #[test]
     fn detects_julia_args_that_override_the_jetls_source() {
         let overrides = |args: &[&str]| JuliaExtension::overrides_jetls_source(&strings(args));
-        assert!(overrides(&["--project=/dev/JETLS", "--", "serve"]));
-        assert!(overrides(&["--project", "--", "serve"]));
-        assert!(!overrides(&["--threads=1", "--", "serve"]));
-        assert!(!overrides(&["serve"]));
+        assert!(overrides(&["--project=/dev/JETLS", "-m", "JETLS", "serve"]));
+        assert!(overrides(&["--project", "-m", "JETLS", "serve"]));
+        assert!(!overrides(&["--threads=1", "-m", "JETLS", "serve"]));
+        assert!(!overrides(&["-m", "JETLS", "serve"]));
+        // Only flags before the module entry point go to `julia`; anything
+        // after it is a JETLS app argument.
+        assert!(!overrides(&[
+            "-m",
+            "JETLS",
+            "serve",
+            "--project=/dev/JETLS"
+        ]));
         // Sysimage flags stay on the managed path for now (JETLS.jl#366).
-        assert!(!overrides(&["-J/sys.so", "--", "serve"]));
-        assert!(!overrides(&["--sysimage=/sys.so", "--", "serve"]));
-        // Only arguments before the `--` separator go to `julia`; without the
-        // separator, everything is a JETLS app argument.
-        assert!(!overrides(&["--project=/dev/JETLS", "serve"]));
+        assert!(!overrides(&["-J/sys.so", "-m", "JETLS", "serve"]));
+        assert!(!overrides(&["--sysimage=/sys.so", "-m", "JETLS", "serve"]));
     }
 
     #[test]

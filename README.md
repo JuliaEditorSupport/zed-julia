@@ -204,12 +204,10 @@ installation as:
 julia --startup-file=no --history-file=no --threads=auto -m JETLS serve
 ```
 
-Custom `binary.arguments` replace the default `["serve"]`: arguments before
-a `--` separator are passed to `julia` itself (after the defaults above, so
-they can override them), and the rest are passed to JETLS. The arguments
-must include exactly one
-[`serve`](https://aviatesk.github.io/JETLS.jl/release/launching/) subcommand
-of JETLS. For example, to run the server on a single thread:
+Custom `binary.arguments` replace this entire argument list, so they must
+spell out the full `julia` invocation, including `-m JETLS` and exactly
+one [`serve`](https://aviatesk.github.io/JETLS.jl/release/launching/)
+subcommand. For example, to run the server on a single thread:
 
 > `~/.config/zed/settings.json` (global) or `.zed/settings.json` (per-project)
 
@@ -218,7 +216,14 @@ of JETLS. For example, to run the server on a single thread:
   "lsp": {
     "JETLS": {
       "binary": {
-        "arguments": ["--threads=1", "--", "serve"],
+        "arguments": [
+          "--startup-file=no",
+          "--history-file=no",
+          "--threads=1",
+          "-m",
+          "JETLS",
+          "serve",
+        ],
       },
     },
   },
@@ -241,20 +246,28 @@ To run JETLS from a local checkout or fork, point the launch at it with
   "lsp": {
     "JETLS": {
       "binary": {
-        "arguments": ["--project=/path/to/JETLS/directory", "--", "serve"],
+        "arguments": [
+          "--startup-file=no",
+          "--history-file=no",
+          "--threads=auto",
+          "--project=/path/to/JETLS/directory",
+          "-m",
+          "JETLS",
+          "serve",
+        ],
       },
     },
   },
 }
 ```
 
-When the Julia arguments contain `--project`, the launch provides its own
-JETLS instead of the managed installation. The extension still verifies
-the Julia version and that the configured server starts, but skips the
-managed installation and its pin verification, and the checkout resolves
-its dependencies against your regular Julia environment. Keep the
-checkout's environment instantiated: a broken checkout is reported before
-the server starts.
+When the arguments pass `--project` to `julia` (before `-m JETLS`), the
+launch provides its own JETLS instead of the managed installation. The
+extension still verifies the Julia version and that the configured server
+starts, but skips the managed installation and its pin verification, and
+the checkout resolves its dependencies against your regular Julia
+environment. Keep the checkout's environment instantiated: a broken
+checkout is reported before the server starts.
 
 #### Custom JETLS command
 
