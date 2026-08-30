@@ -4,9 +4,9 @@ description = "Julia support, powered by JETLS."
 version = "0.2.0"
 schema_version = 1
 authors = [
-    "Peter Pieske <piechologist@users.noreply.github.com>",
-    "Shuhei Kadowaki <aviatesk@gmail.com>",
-    "Paul Berg <paul@plutojl.org>",
+  "Peter Pieske <piechologist@users.noreply.github.com>",
+  "Shuhei Kadowaki <aviatesk@gmail.com>",
+  "Paul Berg <paul@plutojl.org>",
 ]
 repository = "https://github.com/JuliaEditorSupport/zed-julia"
 
@@ -21,6 +21,11 @@ args = ["--startup-file=no", "--history-file=no", "-e", "*"]
 kind = "process:exec"
 command = "*"
 args = ["--startup-file=no", "--history-file=no", "--threads=auto", "**"]
+
+[[capabilities]]
+kind = "download_file"
+host = "raw.githubusercontent.com"
+path = ["aviatesk", "JETLS.jl", "*", "JETLS_VERSION"]
 
 [grammars.julia]
 repository = "https://github.com/tree-sitter/tree-sitter-julia"

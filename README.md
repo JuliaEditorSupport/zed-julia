@@ -153,28 +153,30 @@ existing depot.
 
 ### Automatic installation and updates
 
-Using the selected Julia executable, the extension automatically installs a
-pinned JETLS release as a [Julia Pkg app](https://pkgdocs.julialang.org/dev/apps/)
-the first time it is needed. Network access is required when JETLS is installed
-or updated.
+Each zed-julia release pins an exact JETLS release. Using the selected
+Julia executable, the extension automatically installs the pinned release
+as a [Julia Pkg app](https://pkgdocs.julialang.org/dev/apps/) the first
+time it is needed, and reinstalls it when a zed-julia update changes the
+pin. The initial installation may take several minutes while Julia
+resolves and precompiles JETLS.
 
-JETLS is installed into a depot private to the extension, so this does not
-create or modify a user-global `~/.julia/bin/jetls`. Each zed-julia release
-pins an exact JETLS release. When that pin changes, Zed's normal extension
-auto-update causes the managed JETLS installation to update as well. Once the
-pinned release is installed, verifying and launching the managed JETLS
-installation does not require network access. JETLS may still access the network
-to instantiate a workspace package environment unless
-`full_analysis.auto_instantiate` is disabled.
+Network access is required when JETLS is installed or updated. Every
+installation starts with a small fetch through Zed's downloader that
+verifies the pinned release, so disallowing downloads on the Zed side
+stops the installation before Julia's package manager starts any of its
+own downloads. Once the pinned release is installed, verifying and
+launching it is network-free, though the server may still access the
+network to instantiate a workspace package environment unless
+[`full_analysis.auto_instantiate`](https://aviatesk.github.io/JETLS.jl/release/configuration/#config/full_analysis/auto_instantiate)
+is disabled.
 
-The server launches with the private depot first in `JULIA_DEPOT_PATH` and
-the user depot chain (`~/.julia`, or `JULIA_DEPOT_PATH` if set in the shell
-or `binary.env`) after it: everything the managed installation writes stays
-private, while packages and precompile caches already installed in the user
-depots are reused when analyzing workspace dependencies.
-
-The initial installation may take several minutes while Julia installs and
-precompiles JETLS.
+JETLS is installed into a depot private to the extension — nothing
+creates or modifies a user-global `~/.julia/bin/jetls`. The server
+launches with that depot first in `JULIA_DEPOT_PATH` and the user depot
+chain (`~/.julia`, or `JULIA_DEPOT_PATH` if set in the shell or
+`binary.env`) after it: everything the managed installation writes stays
+private, while packages and precompile caches already in the user depots
+are reused when analyzing workspace dependencies.
 
 > [!tip]
 >
