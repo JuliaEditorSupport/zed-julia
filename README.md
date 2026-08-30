@@ -105,7 +105,7 @@ automatically:
   ```jsonc
   {
     "lsp": {
-      "JETLS": {
+      "jetls": {
         "binary": {
           "env": {
             "JULIAUP_CHANNEL": "1.13",
@@ -127,7 +127,7 @@ automatically:
   ```jsonc
   {
     "lsp": {
-      "JETLS": {
+      "jetls": {
         "binary": {
           "env": {
             "JULIA_APPS_JULIA_CMD": "/path/to/specific/julia/executable",
@@ -192,7 +192,7 @@ precompiles JETLS.
 ### Launch configuration
 
 Most users do not need any launch configuration. When the defaults do not
-fit your setup, customize how the server is launched in the `lsp.JETLS`
+fit your setup, customize how the server is launched in the `lsp.jetls`
 section of Zed settings.
 
 #### Managed JETLS arguments
@@ -214,7 +214,7 @@ subcommand. For example, to run the server on a single thread:
 ```jsonc
 {
   "lsp": {
-    "JETLS": {
+    "jetls": {
       "binary": {
         "arguments": [
           "--startup-file=no",
@@ -244,7 +244,7 @@ To run JETLS from a local checkout or fork, point the launch at it with
 ```jsonc
 {
   "lsp": {
-    "JETLS": {
+    "jetls": {
       "binary": {
         "arguments": [
           "--startup-file=no",
@@ -283,7 +283,7 @@ user-global [`Pkg.Apps`](https://pkgdocs.julialang.org/dev/apps/) install:
 ```jsonc
 {
   "lsp": {
-    "JETLS": {
+    "jetls": {
       "binary": {
         "path": "~/.julia/bin/jetls",
         "arguments": ["serve"],
@@ -344,7 +344,7 @@ This method uses JETLS's
 [LSP-based configuration](https://aviatesk.github.io/JETLS.jl/release/configuration/#config/lsp-config)
 mechanism, which Zed supports natively: when you change `initialization_options`
 and save `settings.json`, Zed automatically restarts the server to apply them.
-Configure initialization options and server settings under the `lsp.JETLS`
+Configure initialization options and server settings under the `lsp.jetls`
 section:
 
 > `~/.config/zed/settings.json` (global) or `.zed/settings.json` (per-project)
@@ -352,7 +352,7 @@ section:
 ```jsonc
 {
   "lsp": {
-    "JETLS": {
+    "jetls": {
       "settings": {
         // Prevent JETLS from automatically instantiating the package
         // environment
@@ -452,9 +452,9 @@ This is a breaking migration for existing users:
 
 - JETLS requires Julia v1.12.2 through 1.13.x. See
   [Julia for JETLS](#julia-for-jetls) for runtime selection.
-- The language-server identifier has changed from `julia` to `JETLS`. Existing
+- The language-server identifier has changed from `julia` to `jetls`. Existing
   LanguageServer.jl settings under `lsp.julia` are not migrated or forwarded to
-  JETLS; configure the new server under `lsp.JETLS`.
+  JETLS; configure the new server under `lsp.jetls`.
 - The extension now [installs and updates](#automatic-installation-and-updates)
   a pinned JETLS Julia Pkg app in an extension-private depot. The
   LanguageServer.jl environment previously used by the extension is no longer
