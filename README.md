@@ -88,6 +88,15 @@ unlike `.envrc` edits, those settings apply with an automatic server restart.
 > can [disable it](#disabling-the-language-server) and keep using the rest of
 > the extension.
 
+- [Julia for JETLS](#julia-for-jetls)
+- [Automatic installation and updates](#automatic-installation-and-updates)
+- [Launch configuration](#launch-configuration)
+- [Server configuration](#server-configuration)
+- [Formatter integration](#formatter-integration)
+- [LanguageServer.jl as an alternative server](#languageserverjl-as-an-alternative-server)
+- [Disabling the language server](#disabling-the-language-server)
+- [Migrating to version 0.2](#migrating-to-version-02)
+
 ### Julia for JETLS
 
 JETLS requires [Julia](https://julialang.org/downloads) v1.12.2 through 1.13.x.
@@ -393,7 +402,7 @@ For complete configuration details, see the JETLS documentation for
 [configuration](https://aviatesk.github.io/JETLS.jl/release/configuration/) and
 [initialization options](https://aviatesk.github.io/JETLS.jl/release/launching/#init-options).
 
-### Formatting
+### Formatter integration
 
 JETLS delegates formatting to an external formatter executable. Install the
 formatter you want to use as a Julia Pkg app and ensure that its executable is
@@ -461,8 +470,9 @@ This is a breaking migration for existing users:
   a pinned JETLS Julia Pkg app in an extension-private depot. The
   LanguageServer.jl environment previously used by the extension is no longer
   used.
-- JETLS uses Runic as its default formatter. See [Formatting](#formatting) for
-  installation instructions and the JuliaFormatter alternative.
+- JETLS uses Runic as its default formatter.
+  See [Formatter integration](#formatter-integration)
+  for installation instructions and the JuliaFormatter alternative.
 
 If JETLS is not suitable for your current setup, you can
 [disable the language server](#disabling-the-language-server) while continuing
