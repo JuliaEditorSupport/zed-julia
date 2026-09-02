@@ -5,7 +5,6 @@
 - [Developing Extensions](https://zed.dev/docs/extensions/developing-extensions)
 - [Language Extensions](https://zed.dev/docs/extensions/languages)
 
-
 ## Filing issues
 
 Before reporting an issue,
@@ -31,3 +30,28 @@ or other extension integration in the
 [zed-julia issue tracker](https://github.com/JuliaEditorSupport/zed-julia/issues).
 If the behavior also occurs when running JETLS independently of Zed, check the
 [JETLS.jl issue tracker](https://github.com/aviatesk/JETLS.jl/issues).
+
+## Updating the pinned JETLS release
+
+Each zed-julia release pins an exact dated JETLS release tag. Update the pin
+with the release date:
+
+```sh
+./scripts/update-jetls-revision.sh YYYY-MM-DD
+```
+
+The script verifies the tag's `JETLS_VERSION` descriptor, reads the `julia`
+compat entry from its `Project.toml`, and updates `JETLS_REVISION`,
+`JULIA_VERSION_LOWER_BOUND`, and `JULIA_VERSION_UPPER_BOUND` in
+[`src/julia.rs`](./src/julia.rs). It requires the
+[GitHub CLI](https://cli.github.com/) with access to the GitHub API.
+
+Verify the current source without changing it and run the Rust tests:
+
+```sh
+./scripts/update-jetls-revision.sh --check
+cargo test --locked
+```
+
+Update the pin together with a zed-julia extension release so users receive the
+new managed JETLS version through the extension update.

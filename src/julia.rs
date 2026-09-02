@@ -15,9 +15,9 @@ use zed_extension_api::{
 
 const JETLS_REPOSITORY: &str = "https://github.com/aviatesk/JETLS.jl";
 const JETLS_RAW_CONTENT: &str = "https://raw.githubusercontent.com/aviatesk/JETLS.jl";
-// Bump this dated tag together with the zed-julia extension release, and keep
-// the Julia version bounds below in sync with the `julia` compat declared in
-// the pinned revision's Project.toml; CI verifies the bounds via `scripts/check-julia-bounds.sh`.
+// Use `scripts/update-jetls-revision.sh` to bump this dated tag together with
+// the zed-julia extension release and keep the Julia version bounds below in
+// sync with the pinned revision's Project.toml; CI runs its `--check` mode.
 const JETLS_REVISION: &str = "2026-08-29";
 // Supported Julia versions, inclusive: the upper bound allows any patch
 // release of that minor version (`1.13` allows any Julia 1.13.x).

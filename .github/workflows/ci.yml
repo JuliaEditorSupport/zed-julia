@@ -24,13 +24,13 @@ jobs:
       - name: Run tests
         run: cargo test --locked
 
-  check-julia-bounds:
-    name: check julia bounds
+  check-jetls-revision:
+    name: check JETLS revision
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
-      - name: Check the julia bounds against the pinned release
+      - name: Check the pinned JETLS revision
         env:
           GH_TOKEN: ${{ github.token }}
-        run: ./scripts/check-julia-bounds.sh
+        run: ./scripts/update-jetls-revision.sh --check
