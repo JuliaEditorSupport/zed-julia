@@ -93,6 +93,7 @@ unlike `.envrc` edits, those settings apply with an automatic server restart.
 - [Launch configuration](#launch-configuration)
 - [Server configuration](#server-configuration)
 - [Formatter integration](#formatter-integration)
+- [Fatou as an alternative server](#fatou-as-an-alternative-server)
 - [LanguageServer.jl as an alternative server](#languageserverjl-as-an-alternative-server)
 - [Disabling the language server](#disabling-the-language-server)
 - [Migrating to version 0.2](#migrating-to-version-02)
@@ -432,6 +433,43 @@ above. Range formatting requires JuliaFormatter v2.7.0 or later.
 
 For custom formatter executables and further details, see the JETLS
 [formatter documentation](https://aviatesk.github.io/JETLS.jl/release/formatting/).
+
+### Fatou as an alternative server
+
+[Fatou](https://fatou.dev/) is a Julia language server, formatter, and linter
+written in Rust that runs without Julia. Install **Fatou** from Zed's
+extensions view (`zed: extensions`), keeping this Julia extension installed for
+syntax highlighting, built-in tasks, and REPL integration. The Fatou extension
+uses `fatou` from your worktree's `PATH` when available and otherwise downloads
+a release binary.
+
+To use Fatou as the language server and formatter, add:
+
+> `~/.config/zed/settings.json` (global) or `.zed/settings.json` (per-project)
+
+```jsonc
+{
+  "languages": {
+    "Julia": {
+      "language_servers": ["fatou-language-server"],
+      "formatter": {
+        "language_server": {
+          "name": "fatou-language-server",
+        },
+      },
+    },
+  },
+}
+```
+
+This selects Fatou instead of JETLS. Remove any
+`"enable_language_server": false` setting for Julia, since it disables Fatou
+too. To run both servers, use
+`"language_servers": ["jetls", "fatou-language-server"]` instead. Formatting
+will still use Fatou, while diagnostics may overlap.
+
+For further configuration, see Fatou's
+[editor setup guide](https://fatou.dev/guide/editors.html#zed).
 
 ### Disabling the language server
 
