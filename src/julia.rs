@@ -13,6 +13,7 @@ use zed_extension_api::{
     CodeLabel, CodeLabelSpan, Result,
 };
 
+const JETLS_SERVER_ID: &str = "jetls";
 const JETLS_REPOSITORY: &str = "https://github.com/aviatesk/JETLS.jl";
 const JETLS_RAW_CONTENT: &str = "https://raw.githubusercontent.com/aviatesk/JETLS.jl";
 // Use `scripts/update-jetls-revision.sh` to bump this dated tag and keep the
@@ -977,6 +978,24 @@ end
             env: launch_env,
         })
     }
+
+    fn initialization_options(
+        server_id: &str,
+        options: Option<zed::serde_json::Value>,
+    ) -> Option<zed::serde_json::Value> {
+        if server_id != JETLS_SERVER_ID {
+            return options;
+        }
+        let mut options = options
+            .filter(|options| !options.is_null())
+            .unwrap_or_else(|| zed::serde_json::json!({}));
+        if let Some(options) = options.as_object_mut() {
+            options
+                .entry("pull_diagnostics")
+                .or_insert(zed::serde_json::json!(true));
+        }
+        Some(options)
+    }
 }
 
 impl zed::Extension for JuliaExtension {
@@ -1028,7 +1047,10 @@ impl zed::Extension for JuliaExtension {
         let initialization_options = LspSettings::for_worktree(server_id.as_ref(), worktree)
             .ok()
             .and_then(|s| s.initialization_options.clone());
-        Ok(initialization_options)
+        Ok(Self::initialization_options(
+            server_id.as_ref(),
+            initialization_options,
+        ))
     }
 
     fn language_server_workspace_configuration(
@@ -1076,6 +1098,44 @@ mod tests {
             JuliaExtension::args_for_subcommand(&args, "version").unwrap(),
             strings(&["-m", "JETLS", "version"])
         );
+    }
+
+    #[test]
+    fn jetls_initialization_options_enable_pull_diagnostics_by_default() {
+        for options in [
+            None,
+            Some(zed::serde_json::Value::Null),
+            Some(zed::serde_json::json!({})),
+        ] {
+            assert_eq!(
+                JuliaExtension::initialization_options(JETLS_SERVER_ID, options),
+                Some(zed::serde_json::json!({ "pull_diagnostics": true }))
+            );
+        }
+        assert_eq!(
+            JuliaExtension::initialization_options(
+                JETLS_SERVER_ID,
+                Some(zed::serde_json::json!({ "reuse_native_inference": true }))
+            ),
+            Some(zed::serde_json::json!({
+                "reuse_native_inference": true,
+                "pull_diagnostics": true
+            }))
+        );
+    }
+
+    #[test]
+    fn jetls_initialization_options_preserve_explicit_pull_diagnostics() {
+        for enabled in [false, true] {
+            let options = zed::serde_json::json!({
+                "pull_diagnostics": enabled,
+                "reuse_native_inference": true
+            });
+            assert_eq!(
+                JuliaExtension::initialization_options(JETLS_SERVER_ID, Some(options.clone())),
+                Some(options)
+            );
+        }
     }
 
     #[test]
