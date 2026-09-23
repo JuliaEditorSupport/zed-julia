@@ -412,6 +412,25 @@ impl JuliaExtension {
         );
     }
 
+    // A generation only ever holds the pin it was installed from, and only a
+    // successful verification of that pin writes its stamp, so a stamp for
+    // another pin settles the version probe in advance. Probing anyway would
+    // load (and after a Julia patch update, fully re-precompile) the old JETLS
+    // just to fail. Unlike the fast path above, this only ever rejects a
+    // generation, so it cannot pin starts to a failure loop.
+    fn is_stamped_for_another_pin(generation_path: &Path) -> bool {
+        fs::read_to_string(Self::install_stamp_path(generation_path))
+            .ok()
+            .and_then(|stamp| zed::serde_json::from_str::<zed::serde_json::Value>(&stamp).ok())
+            .and_then(|stamp| {
+                stamp
+                    .get("revision")?
+                    .as_str()
+                    .map(|revision| revision != JETLS_REVISION)
+            })
+            .unwrap_or(false)
+    }
+
     // Records that a start resolved this generation (or runtime container),
     // so cleanup keeps what a still-open window may be running a server from.
     fn touch_last_used(base_path: &Path) {
@@ -904,10 +923,14 @@ end
         // reclaimed by cleanup), so a retry starts from a clean slate.
         let generation_path = (|| -> Result<String> {
             let current_generation = Self::read_current_generation(&container_path);
-            let installed_version = current_generation.as_ref().map(|generation| {
-                let probe_env = Self::server_launch_env(command_env.clone(), generation, platform);
-                Self::run_version_command(&julia_bin, &args, &probe_env)
-            });
+            let installed_version = current_generation
+                .as_ref()
+                .filter(|generation| !Self::is_stamped_for_another_pin(Path::new(generation)))
+                .map(|generation| {
+                    let probe_env =
+                        Self::server_launch_env(command_env.clone(), generation, platform);
+                    Self::run_version_command(&julia_bin, &args, &probe_env)
+                });
             if let (Some(generation), false) = (
                 &current_generation,
                 Self::managed_installation_needs_update(installed_version.as_ref()),
@@ -1330,6 +1353,32 @@ mod tests {
 
         assert!(std::fs::metadata(&current_path).is_ok());
         assert!(std::fs::metadata(&fresh_path).is_ok());
+        std::fs::remove_dir_all(&base).unwrap();
+    }
+
+    #[test]
+    fn skips_the_probe_only_for_generations_stamped_for_another_pin() {
+        let (base, container) = temp_container("stamp");
+        let (_, generation_path) = JuliaExtension::create_generation_directory(&container).unwrap();
+        let generation = Path::new(&generation_path);
+        let stamp_path = JuliaExtension::install_stamp_path(generation);
+
+        // Without a readable revision, the probe decides.
+        assert!(!JuliaExtension::is_stamped_for_another_pin(generation));
+        std::fs::write(&stamp_path, "garbage").unwrap();
+        assert!(!JuliaExtension::is_stamped_for_another_pin(generation));
+        std::fs::write(&stamp_path, "{\"julia\": \"1.12.6\"}").unwrap();
+        assert!(!JuliaExtension::is_stamped_for_another_pin(generation));
+
+        JuliaExtension::write_install_stamp(&generation_path, "1.12.6");
+        assert!(!JuliaExtension::is_stamped_for_another_pin(generation));
+        std::fs::write(
+            &stamp_path,
+            "{\"revision\": \"2026-08-01\", \"julia\": \"1.12.6\"}",
+        )
+        .unwrap();
+        assert!(JuliaExtension::is_stamped_for_another_pin(generation));
+
         std::fs::remove_dir_all(&base).unwrap();
     }
 
