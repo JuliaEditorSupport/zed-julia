@@ -53,5 +53,73 @@ Verify the current source without changing it and run the Rust tests:
 cargo test --locked
 ```
 
-Update the pin together with a zed-julia extension release so users receive the
-new managed JETLS version through the extension update.
+Pin updates land on `main` in their own pull requests, and users receive the new
+managed JETLS version with the next zed-julia [release](#releasing). They do not
+need a changelog entry: release preparation generates the `### Language server`
+section from the pins of the previous and the new release, linking the release
+notes of every JETLS release in between.
+
+## Changelog
+
+Record user-visible changes in the `Unreleased` section of
+[`CHANGELOG.md`](./CHANGELOG.md), preferably in the same pull request as the
+change. Write them under `### Zed extension` from an extension user's
+perspective, using `#### Added`, `#### Changed`, `#### Fixed`, or similar
+headings. Internal refactors, tests, documentation-only changes, and routine
+dependency updates usually do not need an entry.
+
+The pinned JETLS release and the `### Language server` section are filled in
+automatically during [release preparation](#releasing); do not edit them by
+hand.
+
+## Releasing
+
+Zed builds and distributes this extension from the commit that the
+`extensions/julia` submodule of
+[zed-industries/extensions](https://github.com/zed-industries/extensions)
+points to. A release tags that commit here, creates a GitHub release from its
+changelog section, and then opens a pull request there that updates the
+submodule and the version in `extensions.toml`.
+
+Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html). To
+release the extension:
+
+1. Prepare the release branch and pull request:
+
+   ```sh
+   ./scripts/prepare-release.sh X.Y.Z
+   ```
+
+   The script branches `releases/vX.Y.Z` off `origin/main`, sets the version in
+   `extension.toml`, `Cargo.toml`, and `Cargo.lock`, renames the `Unreleased`
+   section of `CHANGELOG.md` to the release version (recording the
+   [pinned JETLS release](#updating-the-pinned-jetls-release), linking the
+   JETLS release notes since the previous release, and re-creating the
+   `Unreleased` template), creates the `vX.Y.Z` release commit, and opens a
+   pull request against `main`. Use `--no-push` to prepare the branch locally
+   without pushing or opening the pull request. The script requires Julia,
+   Cargo, and the GitHub CLI.
+
+2. Wait for CI to pass on the pull request and review the generated changelog
+   section. The regular checks, including the pinned JETLS release check, run
+   on it, and [`release.yml`](./.github/workflows/release.yml) verifies that
+   the branch name matches the manifests and the changelog, that the changelog
+   records the pinned JETLS release, and that the release tag does not exist
+   yet.
+
+3. Merge the pull request. The release workflow pushes the `vX.Y.Z` tag at the
+   merge commit, creates the GitHub release with the changelog section as its
+   notes, and opens a pull request that updates the extension in
+   zed-industries/extensions. The release branch can be deleted after merging.
+
+4. Follow up on the zed-industries/extensions pull request until it is merged.
+   Never move a published tag: if the registry review requires source changes,
+   merge them here, prepare a new patch release, and close the outdated
+   registry pull request.
+
+The registry update authenticates with the `COMMITTER_TOKEN` repository secret:
+a classic GitHub personal access token with the `repo` and `workflow` scopes.
+The pull request is opened by the token owner from their fork of
+zed-industries/extensions, which is created if it does not exist yet. Updating
+the fork also syncs upstream workflow files, which requires the `workflow`
+scope.
