@@ -57,7 +57,7 @@ impl JuliaExtension {
             Some(CompletionKind::Function) => CodeLabelSpan::literal(
                 label,
                 Some(
-                    if label.starts_with('@') {
+                    if label.starts_with('@') || label.ends_with("\"\"") {
                         "function.macro"
                     } else {
                         "function.call"
@@ -114,15 +114,15 @@ impl JuliaExtension {
         let name = &symbol.name;
 
         // JETLS uses: Module, Function, Struct, Field, Object (argument),
-        // Interface (abstract type), Class (primitive type), Constant, Variable,
-        // Namespace (let), TypeParameter
+        // Interface (abstract type), Number (primitive type), Constant, Variable,
+        // Enum, EnumMember, TypeParameter
         let (prefix, name_highlight) = match symbol.kind {
             SymbolKind::Module => ("module ", "type"),
             SymbolKind::Struct => ("struct ", "type"),
             SymbolKind::Interface => ("abstract type ", "type"),
-            SymbolKind::Class => ("primitive type ", "type"),
+            SymbolKind::Number => ("primitive type ", "type"),
             SymbolKind::Function => {
-                if name.starts_with('@') {
+                if name.starts_with('@') && name != "@main" {
                     ("macro ", "function.macro")
                 } else {
                     ("function ", "function")
@@ -131,7 +131,8 @@ impl JuliaExtension {
             SymbolKind::Constant => ("const ", "constant"),
             SymbolKind::Variable | SymbolKind::Object => ("", "variable"),
             SymbolKind::Field => ("", "property"),
-            SymbolKind::Namespace => ("let ", "variable"),
+            SymbolKind::Enum => ("@enum ", "type"),
+            SymbolKind::EnumMember => ("", "constant"),
             SymbolKind::TypeParameter => ("", "type"),
             _ => ("", ""),
         };
@@ -142,7 +143,15 @@ impl JuliaExtension {
 
         let mut spans = Vec::new();
         if !prefix.is_empty() {
-            spans.push(CodeLabelSpan::literal(prefix, Some("keyword".to_string())));
+            let prefix_highlight = if prefix.starts_with('@') {
+                "function.macro"
+            } else {
+                "keyword"
+            };
+            spans.push(CodeLabelSpan::literal(
+                prefix,
+                Some(prefix_highlight.to_string()),
+            ));
         }
         if name_highlight.is_empty() {
             spans.push(CodeLabelSpan::literal(name, None));
@@ -1087,6 +1096,97 @@ mod tests {
 
     fn strings(values: &[&str]) -> Vec<String> {
         values.iter().map(|value| value.to_string()).collect()
+    }
+
+    fn symbol_label(name: &str, kind: SymbolKind) -> CodeLabel {
+        JuliaExtension
+            .label_for_symbol_impl(Symbol {
+                kind,
+                name: name.to_string(),
+            })
+            .expect("Julia symbols always have labels")
+    }
+
+    fn literal_spans(label: &CodeLabel) -> Vec<(&str, Option<&str>)> {
+        label
+            .spans
+            .iter()
+            .map(|span| match span {
+                CodeLabelSpan::Literal(literal) => {
+                    (literal.text.as_str(), literal.highlight_name.as_deref())
+                }
+                CodeLabelSpan::CodeRange(_) => panic!("expected literal spans"),
+            })
+            .collect()
+    }
+
+    #[test]
+    fn labels_jetls_symbol_kinds() {
+        let primitive = symbol_label("MyInt", SymbolKind::Number);
+        assert_eq!(primitive.code, "primitive type MyInt");
+        assert_eq!(primitive.filter_range.start, 15);
+        assert_eq!(primitive.filter_range.end, 20);
+        assert_eq!(
+            literal_spans(&primitive),
+            vec![
+                ("primitive type ", Some("keyword")),
+                ("MyInt", Some("type"))
+            ]
+        );
+
+        let enum_label = symbol_label("Color", SymbolKind::Enum);
+        assert_eq!(enum_label.code, "@enum Color");
+        assert_eq!(enum_label.filter_range.start, 6);
+        assert_eq!(enum_label.filter_range.end, 11);
+        assert_eq!(
+            literal_spans(&enum_label),
+            vec![("@enum ", Some("function.macro")), ("Color", Some("type"))]
+        );
+
+        let enum_member = symbol_label("Red", SymbolKind::EnumMember);
+        assert_eq!(enum_member.code, "Red");
+        assert_eq!(literal_spans(&enum_member), vec![("Red", Some("constant"))]);
+    }
+
+    #[test]
+    fn labels_macros_and_main_entry_point() {
+        let macro_label = symbol_label("@foo", SymbolKind::Function);
+        assert_eq!(macro_label.code, "macro @foo");
+        assert_eq!(macro_label.filter_range.start, 6);
+        assert_eq!(macro_label.filter_range.end, 10);
+        assert_eq!(
+            literal_spans(&macro_label),
+            vec![
+                ("macro ", Some("keyword")),
+                ("@foo", Some("function.macro"))
+            ]
+        );
+
+        let main_label = symbol_label("@main", SymbolKind::Function);
+        assert_eq!(main_label.code, "function @main");
+        assert_eq!(main_label.filter_range.start, 9);
+        assert_eq!(main_label.filter_range.end, 14);
+        assert_eq!(
+            literal_spans(&main_label),
+            vec![("function ", Some("keyword")), ("@main", Some("function"))]
+        );
+    }
+
+    #[test]
+    fn labels_string_macro_completions_as_macros() {
+        let label = JuliaExtension
+            .label_for_completion_impl(Completion {
+                label: "r\"\"".to_string(),
+                label_details: None,
+                detail: Some("[string macro]".to_string()),
+                kind: Some(CompletionKind::Function),
+                insert_text_format: None,
+            })
+            .expect("Julia completions always have labels");
+        assert_eq!(
+            literal_spans(&label),
+            vec![("r\"\"", Some("function.macro"))]
+        );
     }
 
     #[test]

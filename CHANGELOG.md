@@ -25,6 +25,11 @@ Changes before version 0.2.0 are recorded in the corresponding [Zed extension re
 - Zed now pulls [`JETLS/live`](https://aviatesk.github.io/JETLS.jl/release/diagnostic/#diagnostic/source) diagnostics of open files from JETLS through [`textDocument/diagnostic`](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocument_diagnostic) instead of receiving them as pushed notifications, so that, as the LSP specification [intends for pull diagnostics](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocument_pullDiagnostics), the editor decides for which files and when they are computed. The extension sets the [`pull_diagnostics`](https://aviatesk.github.io/JETLS.jl/release/launching/#init-options/pull_diagnostics) initialization option unless `lsp.jetls.initialization_options` already specifies it.
   JETLS launched from a [source checkout](./README.md#running-jetls-from-a-source-checkout) or a [custom command](./README.md#custom-jetls-command) must therefore be `2026-09-22` or later: earlier releases reject the unknown option, show a warning on every start, and fall back to the default initialization options, ignoring any other options set in `lsp.jetls.initialization_options`.
 
+#### Fixed
+
+- Fixed project symbol labels for primitive types, `@enum` types, and enum values, which were shown without highlighting, and for `@main` entry points, which were labeled as macros.
+- Fixed string macro completions such as `r""` to be highlighted as macros instead of function calls.
+
 ## v0.2.0
 
 - Commit: [`v0.2.0`](https://github.com/JuliaEditorSupport/zed-julia/commit/v0.2.0)
