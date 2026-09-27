@@ -16,6 +16,7 @@ This extension adds [Julia](https://julialang.org/) support to
 - [Plot side pane](#plot-side-pane)
 - [Using Zed from the Julia REPL](#using-zed-from-the-julia-repl)
 - [Customizing syntax highlighting](#customizing-syntax-highlighting)
+- [Changelog](./CHANGELOG.md)
 - [Contributing](./CONTRIBUTING.md)
 
 ## Installation

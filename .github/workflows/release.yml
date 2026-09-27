@@ -1,0 +1,134 @@
+name: Release
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - closed
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify release invariants
+    if: >-
+      github.event.action != 'closed' &&
+      startsWith(github.event.pull_request.head.ref, 'releases/v')
+    runs-on: ubuntu-latest
+    env:
+      HEAD_REF: ${{ github.event.pull_request.head.ref }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check the release branch matches the manifests and the CHANGELOG
+        run: |
+          VERSION="${HEAD_REF#releases/v}"
+          if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Invalid release branch: $HEAD_REF"
+            exit 1
+          fi
+          for MANIFEST in extension.toml Cargo.toml; do
+            MANIFEST_VERSION=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$MANIFEST")
+            if [ "$VERSION" != "$MANIFEST_VERSION" ]; then
+              echo "Branch version $VERSION does not match $MANIFEST version $MANIFEST_VERSION"
+              exit 1
+            fi
+          done
+          grep -Fxq "## v$VERSION" CHANGELOG.md
+      - name: Check the CHANGELOG records the pinned JETLS release
+        run: |
+          VERSION="${HEAD_REF#releases/v}"
+          REVISION=$(sed -n 's/^const JETLS_REVISION: &str = "\(.*\)";$/\1/p' src/julia.rs)
+          awk -v ver="## v$VERSION" '
+            /^## / { if (found) exit; if ($0 == ver) { found = 1; next } }
+            found' CHANGELOG.md |
+            grep -Fq -- "- Pinned JETLS: [\`$REVISION\`]"
+      - name: Check the release tag does not exist yet
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${HEAD_REF#releases/v}"
+          if gh api "repos/${{ github.repository }}/git/ref/tags/v$VERSION" >/dev/null 2>&1; then
+            echo "Tag v$VERSION already exists"
+            exit 1
+          fi
+
+  publish:
+    name: Tag and create the GitHub release
+    if: >-
+      github.repository == 'JuliaEditorSupport/zed-julia' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'releases/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+    env:
+      HEAD_REF: ${{ github.event.pull_request.head.ref }}
+      MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+      - name: Determine the release tag
+        id: release
+        run: |
+          TAG="v${HEAD_REF#releases/v}"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+      # The steps below are idempotent so a failed run can be re-run from any
+      # point. The tag must stay lightweight: the registry update records the
+      # object the tag ref points to as the submodule revision, which would be
+      # the tag object rather than the commit for an annotated tag.
+      - name: Push the release tag
+        run: |
+          EXISTING_SHA=$(git ls-remote --tags origin "refs/tags/$TAG" | cut -f1)
+          if [ -z "$EXISTING_SHA" ]; then
+            git tag "$TAG" "$MERGE_SHA"
+            git push origin "refs/tags/$TAG"
+          elif [ "$EXISTING_SHA" != "$MERGE_SHA" ]; then
+            echo "Tag $TAG already exists at $EXISTING_SHA instead of $MERGE_SHA"
+            exit 1
+          else
+            echo "Tag $TAG already exists"
+          fi
+      # Relative links in the CHANGELOG would resolve against the release page,
+      # so they are rewritten to point at the released source.
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists"
+            exit 0
+          fi
+          NOTES=$(awk -v ver="## $TAG" '
+            /^## / { if (found) exit; if ($0 == ver) { found = 1; next } }
+            found' CHANGELOG.md |
+            sed "s#](\./#](https://github.com/$GITHUB_REPOSITORY/blob/$TAG/#g")
+          gh release create "$TAG" \
+            --verify-tag \
+            --title "$TAG" \
+            --notes "$NOTES"
+
+  update-registry:
+    name: Open the Zed extension registry PR
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      # `COMMITTER_TOKEN` is a classic personal access token with the `repo`
+      # and `workflow` scopes. The pull request is opened from the token
+      # owner's fork of zed-industries/extensions, which is created if needed.
+      - uses: huacnlee/zed-extension-action@8cd592a0d24e1e41157740f1a529aeabddc88a1b # v2.0.0
+        with:
+          extension-name: julia
+          tag: ${{ needs.publish.outputs.tag }}
+        env:
+          COMMITTER_TOKEN: ${{ secrets.COMMITTER_TOKEN }}
