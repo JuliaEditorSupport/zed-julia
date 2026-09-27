@@ -17,6 +17,7 @@ const PIN_PLACEHOLDER = "<!-- Set during release preparation; do not edit by han
 const SERVER_PLACEHOLDER = "<!-- Generated during release preparation; do not edit by hand. -->"
 const SERVER_SECTION = "Language server"
 const EXTENSION_SECTION = "Zed extension"
+const NO_EXTENSION_CHANGES = "No changes to the extension itself."
 
 struct ChangelogError <: Exception
     msg::String
@@ -149,6 +150,7 @@ function finalize_changelog(changelog::String;
     (isempty(server_lines) || server_lines == [SERVER_PLACEHOLDER]) ||
         fail("'### $SERVER_SECTION' is generated; move entries to '### $EXTENSION_SECTION'")
     extension_lines = trim_blank_lines(lines[subsections[2].line+1:unreleased_stop-1])
+    isempty(extension_lines) && push!(extension_lines, NO_EXTENSION_CHANGES)
 
     released = [
         "## $tag",
@@ -158,8 +160,7 @@ function finalize_changelog(changelog::String;
     ]
     server_lines = server_section(previous_revision, revision, releases)
     isempty(server_lines) || append!(released, ["", server_lines...])
-    isempty(extension_lines) ||
-        append!(released, ["", "### $EXTENSION_SECTION", "", extension_lines...])
+    append!(released, ["", "### $EXTENSION_SECTION", "", extension_lines...])
 
     return join([
         lines[1:unreleased_start-1]...,

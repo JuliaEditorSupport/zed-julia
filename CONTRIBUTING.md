@@ -70,7 +70,8 @@ dependency updates usually do not need an entry.
 
 The pinned JETLS release and the `### Language server` section are filled in
 automatically during [release preparation](#releasing); do not edit them by
-hand.
+hand. If `### Zed extension` is still empty at that point, the release states
+that the extension itself has no changes.
 
 ## Releasing
 
