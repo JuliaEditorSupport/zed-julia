@@ -345,6 +345,12 @@ match_by = "code"
 match_type = "literal"
 severity = "off"
 
+[testrunner]
+# Run tests with Julia 1.12 via juliaup
+env = { JULIAUP_CHANNEL = "1.12" }
+# Run tests with 4 threads
+julia_args = ["--threads=4"]
+
 # Reuse Julia's native inference cache for faster full analysis
 [initialization_options]
 reuse_native_inference = true
@@ -383,6 +389,14 @@ section:
               "severity": "off",
             },
           ],
+        },
+        "testrunner": {
+          // Run tests with Julia 1.12 via juliaup
+          "env": {
+            "JULIAUP_CHANNEL": "1.12",
+          },
+          // Run tests with 4 threads
+          "julia_args": ["--threads=4"],
         },
       },
       "initialization_options": {
