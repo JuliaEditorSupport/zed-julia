@@ -95,7 +95,6 @@ unlike `.envrc` edits, those settings apply with an automatic server restart.
 - [Server configuration](#server-configuration)
 - [Formatter integration](#formatter-integration)
 - [Fatou as an alternative server](#fatou-as-an-alternative-server)
-- [LanguageServer.jl as an alternative server](#languageserverjl-as-an-alternative-server)
 - [Disabling the language server](#disabling-the-language-server)
 - [Migrating to version 0.2](#migrating-to-version-02)
 
