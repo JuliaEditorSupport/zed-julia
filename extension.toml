@@ -1,7 +1,7 @@
 id = "julia"
 name = "Julia"
 description = "Julia support, powered by JETLS."
-version = "0.2.2"
+version = "0.2.3"
 schema_version = 1
 authors = [
   "Peter Pieske <piechologist@users.noreply.github.com>",
