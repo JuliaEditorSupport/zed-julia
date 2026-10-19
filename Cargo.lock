@@ -764,7 +764,7 @@ dependencies = [
 
 [[package]]
 name = "zed_julia"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "zed_extension_api",
 ]
