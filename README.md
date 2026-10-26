@@ -100,7 +100,10 @@ unlike `.envrc` edits, those settings apply with an automatic server restart.
 
 ### Julia for JETLS
 
-JETLS requires [Julia](https://julialang.org/downloads) v1.12.2 through 1.13.x.
+JETLS supports [Julia](https://julialang.org/downloads) v1.12.2 through 1.14.x.
+It also runs on Julia 1.15 nightly builds, but may break at any time as Julia
+changes. It does not support Julia 1.12.1 or earlier.
+
 To override only the Julia runtime used by managed JETLS without changing
 the worktree `PATH`, set `binary.env` in Zed settings. Unlike the
 [direnv method](#julia-executable), these overrides apply only to JETLS,
@@ -118,7 +121,9 @@ automatically:
       "jetls": {
         "binary": {
           "env": {
-            "JULIAUP_CHANNEL": "1.13",
+            // Optimized build of Julia 1.14, on which JETLS runs faster
+            // (requires juliaup v1.23 or later)
+            "JULIAUP_CHANNEL": "1.14+opt",
           },
         },
       },
@@ -346,8 +351,8 @@ match_type = "literal"
 severity = "off"
 
 [testrunner]
-# Run tests with Julia 1.12 via juliaup
-env = { JULIAUP_CHANNEL = "1.12" }
+# Run tests with Julia nightly via juliaup
+env = { JULIAUP_CHANNEL = "nightly" }
 # Run tests with 4 threads
 julia_args = ["--threads=4"]
 
@@ -391,9 +396,9 @@ section:
           ],
         },
         "testrunner": {
-          // Run tests with Julia 1.12 via juliaup
+          // Run tests with Julia nightly via juliaup
           "env": {
-            "JULIAUP_CHANNEL": "1.12",
+            "JULIAUP_CHANNEL": "nightly",
           },
           // Run tests with 4 threads
           "julia_args": ["--threads=4"],
@@ -513,8 +518,9 @@ Zed Julia extension v0.2 replaces the
 with [JETLS.jl](https://github.com/aviatesk/JETLS.jl).
 This is a breaking migration for existing users:
 
-- JETLS requires Julia v1.12.2 through 1.13.x. See
-  [Julia for JETLS](#julia-for-jetls) for runtime selection.
+- JETLS does not support Julia 1.12.1 or earlier. See
+  [Julia for JETLS](#julia-for-jetls) for the supported versions and runtime
+  selection.
 - The language-server identifier has changed from `julia` to `jetls`. Existing
   LanguageServer.jl settings under `lsp.julia` are not migrated or forwarded to
   JETLS; configure the new server under `lsp.jetls`.
