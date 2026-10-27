@@ -11,7 +11,7 @@ Changes before version 0.2.0 are recorded in the corresponding [Zed extension re
 ## Unreleased
 
 - Commit: [`HEAD`](https://github.com/JuliaEditorSupport/zed-julia/commit/HEAD)
-- Diff: [`v0.2.6...HEAD`](https://github.com/JuliaEditorSupport/zed-julia/compare/v0.2.6...HEAD)
+- Diff: [`v0.2.7...HEAD`](https://github.com/JuliaEditorSupport/zed-julia/compare/v0.2.7...HEAD)
 - Pinned JETLS: <!-- Set during release preparation; do not edit by hand. -->
 
 ### Language server
@@ -19,6 +19,25 @@ Changes before version 0.2.0 are recorded in the corresponding [Zed extension re
 <!-- Generated during release preparation; do not edit by hand. -->
 
 ### Zed extension
+
+## v0.2.7
+
+- Commit: [`v0.2.7`](https://github.com/JuliaEditorSupport/zed-julia/commit/v0.2.7)
+- Diff: [`v0.2.6...v0.2.7`](https://github.com/JuliaEditorSupport/zed-julia/compare/v0.2.6...v0.2.7)
+- Pinned JETLS: [`2026-10-26`](https://github.com/aviatesk/JETLS.jl/releases/tag/2026-10-26)
+
+### Language server
+
+Updated managed JETLS from `2026-10-21` to `2026-10-26`.
+
+- [Release notes for 2026-10-26](https://github.com/aviatesk/JETLS.jl/releases/tag/2026-10-26)
+- [Full server diff](https://github.com/aviatesk/JETLS.jl/compare/2026-10-21...2026-10-26)
+
+### Zed extension
+
+- Added support for Julia 1.14 and Julia 1.15 nightly builds, following the pinned JETLS.
+  The extension previously refused to start JETLS on Julia newer than 1.13. Nightly builds may break at any time as Julia changes.\
+  JETLS runs faster on Julia 1.14 than on Julia 1.13, and even faster on [the experimental optimized builds of Julia 1.14](https://discourse.julialang.org/t/julia-v1-14-0-alpha1-is-now-available/140136#p-648514-new-optimized-and-assertion-builds-experimental-1), which juliaup provides as the `+opt` channels (compared with Julia 1.13, `jetls check` on an optimized build takes about 14% less time on the JETLS repository and 35–50% less on mid-sized packages like [Graphs.jl](https://github.com/JuliaGraphs/Graphs.jl)); [Julia for JETLS](./README.md#julia-for-jetls) shows how to select an optimized build for JETLS with `binary.env`.
 
 ## v0.2.6
 
