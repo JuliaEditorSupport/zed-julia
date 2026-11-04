@@ -11,7 +11,7 @@ Changes before version 0.2.0 are recorded in the corresponding [Zed extension re
 ## Unreleased
 
 - Commit: [`HEAD`](https://github.com/JuliaEditorSupport/zed-julia/commit/HEAD)
-- Diff: [`v0.2.7...HEAD`](https://github.com/JuliaEditorSupport/zed-julia/compare/v0.2.7...HEAD)
+- Diff: [`v0.2.8...HEAD`](https://github.com/JuliaEditorSupport/zed-julia/compare/v0.2.8...HEAD)
 - Pinned JETLS: <!-- Set during release preparation; do not edit by hand. -->
 
 ### Language server
@@ -19,6 +19,23 @@ Changes before version 0.2.0 are recorded in the corresponding [Zed extension re
 <!-- Generated during release preparation; do not edit by hand. -->
 
 ### Zed extension
+
+## v0.2.8
+
+- Commit: [`v0.2.8`](https://github.com/JuliaEditorSupport/zed-julia/commit/v0.2.8)
+- Diff: [`v0.2.7...v0.2.8`](https://github.com/JuliaEditorSupport/zed-julia/compare/v0.2.7...v0.2.8)
+- Pinned JETLS: [`2026-11-04`](https://github.com/aviatesk/JETLS.jl/releases/tag/2026-11-04)
+
+### Language server
+
+Updated managed JETLS from `2026-10-26` to `2026-11-04`.
+
+- [Release notes for 2026-11-04](https://github.com/aviatesk/JETLS.jl/releases/tag/2026-11-04)
+- [Full server diff](https://github.com/aviatesk/JETLS.jl/compare/2026-10-26...2026-11-04)
+
+### Zed extension
+
+No changes to the extension itself.
 
 ## v0.2.7
 
